@@ -7,43 +7,83 @@
 
 import Foundation
 import CoreLocation
-import SwiftUI
 
 class RestaurantViewModel: ObservableObject {
     @Published var restaurants: [Restaurant] = []
     @Published var likedRestaurants: [Restaurant] = []
     @Published var dislikedRestaurants: [Restaurant] = []
 
-    private let geocoder = CLGeocoder()
+    private var nextPageToken: String?
+    private var lastLatitude: Double?
+    private var lastLongitude: Double?
+    private var lastRadiusMiles: Int?
 
-    func fetchRestaurants(for city: String, radiusMiles: Int) {
-        // Clear current restaurants
-        restaurants = []
+    func fetchRestaurants(latitude: Double, longitude: Double, radiusMiles: Int) {
+        self.lastLatitude = latitude
+        self.lastLongitude = longitude
+        self.lastRadiusMiles = radiusMiles
+        self.nextPageToken = nil
+        self.restaurants = []
 
-        geocodeCity(city) { coordinate in
-            guard let coordinate = coordinate else { return }
+        requestPlaces(latitude: latitude, longitude: longitude, radiusMiles: radiusMiles, nextPageToken: nil)
+    }
 
-            let radiusInMeters = radiusMiles * 1609
-            // Here we’ll pretend we got data from an API; for now, just mock some data.
-            // Replace the following mock data with an actual network call later.
-            
-            let mockRestaurants = [
-                Restaurant(id: "1",
-                           name: "Tasty Local Diner",
-                           distance: 0.5,
-                           priceLevel: 1,
-                           images: [URL(string: "https://via.placeholder.com/300")!]),
-                Restaurant(id: "2",
-                           name: "Gourmet Bistro",
-                           distance: 2.0,
-                           priceLevel: 3,
-                           images: [URL(string: "https://via.placeholder.com/300")!])
-            ]
-            
-            DispatchQueue.main.async {
-                self.restaurants = mockRestaurants
-            }
+    private func requestPlaces(latitude: Double, longitude: Double, radiusMiles: Int, nextPageToken: String?) {
+        let radiusInMeters = radiusMiles * 1609
+        let apiKey = "AIzaSyA-y8jnW4QserJxiej8k8UOdJtw5N21up8"
+        var urlString: String
+
+        if let token = nextPageToken {
+            urlString = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?pagetoken=\(token)&key=\(apiKey)"
+        } else {
+            urlString = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=\(latitude),\(longitude)&radius=\(radiusInMeters)&type=restaurant&key=\(apiKey)"
         }
+
+        guard let url = URL(string: urlString) else { return }
+
+        URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+            guard let self = self else { return }
+            guard let data = data, error == nil else {
+                print("Error fetching data: \(error?.localizedDescription ?? "Unknown error")")
+                return
+            }
+
+            do {
+                let result = try JSONDecoder().decode(GooglePlacesResponse.self, from: data)
+
+                let fetchedRestaurants = result.results.compactMap { place -> Restaurant? in
+                    let imageURLs: [URL] = place.photos?.compactMap { photo in
+                        URL(string: "https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=\(photo.photo_reference)&key=\(apiKey)")
+                    } ?? []
+
+                    guard let lat = self.lastLatitude, let lng = self.lastLongitude else { return nil }
+                    let userLocation = CLLocation(latitude: lat, longitude: lng)
+                    let restaurantLocation = CLLocation(latitude: place.geometry.location.lat, longitude: place.geometry.location.lng)
+                    let distanceInMeters = userLocation.distance(from: restaurantLocation)
+                    let distanceInMiles = distanceInMeters / 1609.34
+                    let priceLevel = place.price_level ?? 2
+
+                    return Restaurant(
+                        id: place.place_id,
+                        name: place.name,
+                        distance: distanceInMiles,
+                        priceLevel: priceLevel,
+                        images: imageURLs,
+                        address: place.vicinity,
+                        rating: place.rating,
+                        userRatingsTotal: place.user_ratings_total
+                    )
+                }
+
+                DispatchQueue.main.async {
+                    self.nextPageToken = result.next_page_token
+                    let nextBatch = Array(fetchedRestaurants.prefix(4))
+                    self.restaurants.append(contentsOf: nextBatch)
+                }
+            } catch {
+                print("Decoding error: \(error.localizedDescription)")
+            }
+        }.resume()
     }
 
     func like(restaurant: Restaurant) {
@@ -60,15 +100,54 @@ class RestaurantViewModel: ObservableObject {
         if let index = restaurants.firstIndex(where: { $0.id == restaurant.id }) {
             restaurants.remove(at: index)
         }
+
+        if restaurants.isEmpty {
+            loadMoreIfAvailable()
+        }
     }
 
-    private func geocodeCity(_ city: String, completion: @escaping (CLLocationCoordinate2D?) -> Void) {
-        geocoder.geocodeAddressString(city) { placemarks, error in
-            if let location = placemarks?.first?.location {
-                completion(location.coordinate)
-            } else {
-                completion(nil)
-            }
+    private func loadMoreIfAvailable() {
+        guard let lat = self.lastLatitude,
+              let lng = self.lastLongitude,
+              let radius = self.lastRadiusMiles,
+              let token = self.nextPageToken else {
+            print("No more restaurants available or missing parameters.")
+            return
         }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            self.requestPlaces(latitude: lat, longitude: lng, radiusMiles: radius, nextPageToken: token)
+        }
+    }
+}
+
+// MARK: - Google Places API Response Models
+
+struct GooglePlacesResponse: Codable {
+    let results: [GooglePlaceResult]
+    let next_page_token: String?
+}
+
+struct GooglePlaceResult: Codable {
+    let place_id: String
+    let name: String
+    let geometry: Geometry
+    let price_level: Int?
+    let photos: [Photo]?
+    let vicinity: String
+    let rating: Double?
+    let user_ratings_total: Int?
+
+    struct Geometry: Codable {
+        let location: Location
+    }
+
+    struct Location: Codable {
+        let lat: Double
+        let lng: Double
+    }
+
+    struct Photo: Codable {
+        let photo_reference: String
     }
 }

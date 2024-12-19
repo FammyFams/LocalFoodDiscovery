@@ -6,63 +6,33 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXContainerItemProxy section */
-		34E5CE3E2D1405DD002FDC20 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 34E5CE252D1405DB002FDC20 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 34E5CE2C2D1405DB002FDC20;
-			remoteInfo = LocalFoodDiscovery;
-		};
-		34E5CE482D1405DD002FDC20 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 34E5CE252D1405DB002FDC20 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 34E5CE2C2D1405DB002FDC20;
-			remoteInfo = LocalFoodDiscovery;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
 		34E5CE2D2D1405DB002FDC20 /* LocalFoodDiscovery.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LocalFoodDiscovery.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		34E5CE3D2D1405DD002FDC20 /* LocalFoodDiscoveryTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LocalFoodDiscoveryTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		34E5CE472D1405DD002FDC20 /* LocalFoodDiscoveryUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LocalFoodDiscoveryUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		349FA4E32D1427D700610D73 /* Exceptions for "LocalFoodDiscovery" folder in "LocalFoodDiscovery" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 34E5CE2C2D1405DB002FDC20 /* LocalFoodDiscovery */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		34E5CE2F2D1405DB002FDC20 /* LocalFoodDiscovery */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				349FA4E32D1427D700610D73 /* Exceptions for "LocalFoodDiscovery" folder in "LocalFoodDiscovery" target */,
+			);
 			path = LocalFoodDiscovery;
-			sourceTree = "<group>";
-		};
-		34E5CE402D1405DD002FDC20 /* LocalFoodDiscoveryTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = LocalFoodDiscoveryTests;
-			sourceTree = "<group>";
-		};
-		34E5CE4A2D1405DD002FDC20 /* LocalFoodDiscoveryUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = LocalFoodDiscoveryUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		34E5CE2A2D1405DB002FDC20 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		34E5CE3A2D1405DD002FDC20 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		34E5CE442D1405DD002FDC20 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -76,8 +46,6 @@
 			isa = PBXGroup;
 			children = (
 				34E5CE2F2D1405DB002FDC20 /* LocalFoodDiscovery */,
-				34E5CE402D1405DD002FDC20 /* LocalFoodDiscoveryTests */,
-				34E5CE4A2D1405DD002FDC20 /* LocalFoodDiscoveryUITests */,
 				34E5CE2E2D1405DB002FDC20 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -86,8 +54,6 @@
 			isa = PBXGroup;
 			children = (
 				34E5CE2D2D1405DB002FDC20 /* LocalFoodDiscovery.app */,
-				34E5CE3D2D1405DD002FDC20 /* LocalFoodDiscoveryTests.xctest */,
-				34E5CE472D1405DD002FDC20 /* LocalFoodDiscoveryUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -117,52 +83,6 @@
 			productReference = 34E5CE2D2D1405DB002FDC20 /* LocalFoodDiscovery.app */;
 			productType = "com.apple.product-type.application";
 		};
-		34E5CE3C2D1405DD002FDC20 /* LocalFoodDiscoveryTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 34E5CE542D1405DD002FDC20 /* Build configuration list for PBXNativeTarget "LocalFoodDiscoveryTests" */;
-			buildPhases = (
-				34E5CE392D1405DD002FDC20 /* Sources */,
-				34E5CE3A2D1405DD002FDC20 /* Frameworks */,
-				34E5CE3B2D1405DD002FDC20 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				34E5CE3F2D1405DD002FDC20 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				34E5CE402D1405DD002FDC20 /* LocalFoodDiscoveryTests */,
-			);
-			name = LocalFoodDiscoveryTests;
-			packageProductDependencies = (
-			);
-			productName = LocalFoodDiscoveryTests;
-			productReference = 34E5CE3D2D1405DD002FDC20 /* LocalFoodDiscoveryTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
-		34E5CE462D1405DD002FDC20 /* LocalFoodDiscoveryUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 34E5CE572D1405DD002FDC20 /* Build configuration list for PBXNativeTarget "LocalFoodDiscoveryUITests" */;
-			buildPhases = (
-				34E5CE432D1405DD002FDC20 /* Sources */,
-				34E5CE442D1405DD002FDC20 /* Frameworks */,
-				34E5CE452D1405DD002FDC20 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				34E5CE492D1405DD002FDC20 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				34E5CE4A2D1405DD002FDC20 /* LocalFoodDiscoveryUITests */,
-			);
-			name = LocalFoodDiscoveryUITests;
-			packageProductDependencies = (
-			);
-			productName = LocalFoodDiscoveryUITests;
-			productReference = 34E5CE472D1405DD002FDC20 /* LocalFoodDiscoveryUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -175,14 +95,6 @@
 				TargetAttributes = {
 					34E5CE2C2D1405DB002FDC20 = {
 						CreatedOnToolsVersion = 16.2;
-					};
-					34E5CE3C2D1405DD002FDC20 = {
-						CreatedOnToolsVersion = 16.2;
-						TestTargetID = 34E5CE2C2D1405DB002FDC20;
-					};
-					34E5CE462D1405DD002FDC20 = {
-						CreatedOnToolsVersion = 16.2;
-						TestTargetID = 34E5CE2C2D1405DB002FDC20;
 					};
 				};
 			};
@@ -201,28 +113,12 @@
 			projectRoot = "";
 			targets = (
 				34E5CE2C2D1405DB002FDC20 /* LocalFoodDiscovery */,
-				34E5CE3C2D1405DD002FDC20 /* LocalFoodDiscoveryTests */,
-				34E5CE462D1405DD002FDC20 /* LocalFoodDiscoveryUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		34E5CE2B2D1405DB002FDC20 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		34E5CE3B2D1405DD002FDC20 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		34E5CE452D1405DD002FDC20 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -239,34 +135,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		34E5CE392D1405DD002FDC20 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		34E5CE432D1405DD002FDC20 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		34E5CE3F2D1405DD002FDC20 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 34E5CE2C2D1405DB002FDC20 /* LocalFoodDiscovery */;
-			targetProxy = 34E5CE3E2D1405DD002FDC20 /* PBXContainerItemProxy */;
-		};
-		34E5CE492D1405DD002FDC20 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 34E5CE2C2D1405DB002FDC20 /* LocalFoodDiscovery */;
-			targetProxy = 34E5CE482D1405DD002FDC20 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		34E5CE4F2D1405DD002FDC20 /* Debug */ = {
@@ -399,6 +268,7 @@
 				DEVELOPMENT_TEAM = 5C5NXQ456H;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LocalFoodDiscovery/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -411,6 +281,10 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = matthewzheng.LocalFoodDiscovery;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -428,6 +302,7 @@
 				DEVELOPMENT_TEAM = 5C5NXQ456H;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LocalFoodDiscovery/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -440,81 +315,13 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = matthewzheng.LocalFoodDiscovery;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		34E5CE552D1405DD002FDC20 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 5C5NXQ456H;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = matthewzheng.LocalFoodDiscoveryTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LocalFoodDiscovery.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/LocalFoodDiscovery";
-			};
-			name = Debug;
-		};
-		34E5CE562D1405DD002FDC20 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 5C5NXQ456H;
-				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = matthewzheng.LocalFoodDiscoveryTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/LocalFoodDiscovery.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/LocalFoodDiscovery";
-			};
-			name = Release;
-		};
-		34E5CE582D1405DD002FDC20 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 5C5NXQ456H;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = matthewzheng.LocalFoodDiscoveryUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = LocalFoodDiscovery;
-			};
-			name = Debug;
-		};
-		34E5CE592D1405DD002FDC20 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 5C5NXQ456H;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = matthewzheng.LocalFoodDiscoveryUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = LocalFoodDiscovery;
 			};
 			name = Release;
 		};
@@ -535,24 +342,6 @@
 			buildConfigurations = (
 				34E5CE522D1405DD002FDC20 /* Debug */,
 				34E5CE532D1405DD002FDC20 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		34E5CE542D1405DD002FDC20 /* Build configuration list for PBXNativeTarget "LocalFoodDiscoveryTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				34E5CE552D1405DD002FDC20 /* Debug */,
-				34E5CE562D1405DD002FDC20 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		34E5CE572D1405DD002FDC20 /* Build configuration list for PBXNativeTarget "LocalFoodDiscoveryUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				34E5CE582D1405DD002FDC20 /* Debug */,
-				34E5CE592D1405DD002FDC20 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

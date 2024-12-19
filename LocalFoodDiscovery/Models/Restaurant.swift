@@ -13,4 +13,7 @@ struct Restaurant: Identifiable {
     let distance: Double
     let priceLevel: Int
     let images: [URL]
+    let address: String
+    let rating: Double?
+    let userRatingsTotal: Int?
 }

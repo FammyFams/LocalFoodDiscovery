@@ -27,12 +27,14 @@ struct RestaurantCard: View {
             VStack {
                 if let imageURL = restaurant.images.first {
                     AsyncImage(url: imageURL) { image in
-                        image.resizable().scaledToFill()
+                        image
+                            .resizable()
+                            .scaledToFill() // Fill the frame completely
                     } placeholder: {
                         ProgressView()
                     }
-                    .frame(height: 200)
-                    .clipped()
+                    .frame(width: 300, height: 200) // Fixed width and height
+                    .clipped() // Crop the image to fill the frame
                 }
 
                 Text(restaurant.name)
@@ -61,10 +63,8 @@ struct RestaurantCard: View {
                 }
                 .onEnded { _ in
                     if offset.width > 100 {
-                        // Swipe right
                         onSwipe(.right)
                     } else if offset.width < -100 {
-                        // Swipe left
                         onSwipe(.left)
                     } else {
                         withAnimation {
@@ -85,9 +85,13 @@ struct RestaurantCard_Previews: PreviewProvider {
                 name: "Example Restaurant",
                 distance: 1.2,
                 priceLevel: 2,
-                images: [URL(string: "https://via.placeholder.com/300")!]
+                images: [URL(string: "https://via.placeholder.com/300")!],
+                address: "123 Main St",
+                rating: 4.5,
+                userRatingsTotal: 100
             ),
             onSwipe: { _ in }
         )
     }
 }
+
