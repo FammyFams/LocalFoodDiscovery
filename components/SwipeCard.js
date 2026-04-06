@@ -10,20 +10,22 @@ import {
   TouchableOpacity,
 } from 'react-native';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const CARD_WIDTH = Math.min(SCREEN_WIDTH - 32, 420);
-const CARD_HEIGHT = Math.min(Dimensions.get('window').height * 0.62, 520);
+const CARD_HEIGHT = Math.min(SCREEN_HEIGHT * 0.62, 520);
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.22;
 const SWIPE_OUT_DURATION = 300;
 
 const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwipeRight, onPress, isTop, index }, ref) {
   const position = useRef(new Animated.ValueXY()).current;
   const cardScale = useRef(new Animated.Value(1)).current;
+  const isTopRef = useRef(isTop);
+  isTopRef.current = isTop;
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => isTop,
-      onMoveShouldSetPanResponder: (_, g) => isTop && (Math.abs(g.dx) > 5 || Math.abs(g.dy) > 5),
+      onStartShouldSetPanResponder: () => isTopRef.current,
+      onMoveShouldSetPanResponder: (_, g) => isTopRef.current && (Math.abs(g.dx) > 5 || Math.abs(g.dy) > 5),
       onPanResponderMove: (_, gesture) => {
         position.setValue({ x: gesture.dx, y: gesture.dy * 0.3 });
         const progress = Math.min(Math.abs(gesture.dx) / SWIPE_THRESHOLD, 1);
@@ -55,7 +57,6 @@ const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwi
     });
   }
 
-  // Expose swipeLeft/swipeRight so parent buttons can trigger the animation
   useImperativeHandle(ref, () => ({
     swipeLeft: () => swipeOut('left'),
     swipeRight: () => swipeOut('right'),
@@ -73,21 +74,18 @@ const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwi
     outputRange: ['-20deg', '0deg', '20deg'],
   });
 
-  // 0 → 1 as you swipe right past threshold
   const likeProgress = position.x.interpolate({
     inputRange: [0, SWIPE_THRESHOLD],
     outputRange: [0, 1],
     extrapolate: 'clamp',
   });
 
-  // 0 → 1 as you swipe left past threshold
   const nopeProgress = position.x.interpolate({
     inputRange: [-SWIPE_THRESHOLD, 0],
     outputRange: [1, 0],
     extrapolate: 'clamp',
   });
 
-  // Tint overlay — full-image color wash
   const likeTintOpacity = position.x.interpolate({
     inputRange: [0, SWIPE_THRESHOLD],
     outputRange: [0, 0.55],
@@ -99,7 +97,6 @@ const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwi
     extrapolate: 'clamp',
   });
 
-  // Glow border opacity (outside the image, on the card wrapper)
   const likeGlowOpacity = likeProgress;
   const nopeGlowOpacity = nopeProgress;
 
@@ -110,34 +107,25 @@ const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwi
   const imageUri = restaurant.images?.[0];
 
   return (
-    // Outer wrapper: handles motion + glow borders (no overflow:hidden so glow is visible)
     <Animated.View style={[styles.wrapper, wrapperStyle]} {...(isTop ? panResponder.panHandlers : {})}>
 
-      {/* Green glow border — lights up on right swipe */}
       <Animated.View style={[styles.glowBorder, styles.likeGlow, { opacity: likeGlowOpacity }]} />
-      {/* Red glow border — lights up on left swipe */}
       <Animated.View style={[styles.glowBorder, styles.nopeGlow, { opacity: nopeGlowOpacity }]} />
 
-      {/* Inner card — overflow:hidden clips the image + tint to rounded corners */}
       <View style={styles.card}>
         <TouchableOpacity activeOpacity={0.95} onPress={() => isTop && onPress(restaurant)} style={styles.touchable}>
 
-          {/* Full-image green tint */}
           <Animated.View style={[styles.tint, { backgroundColor: '#4CAF50', opacity: likeTintOpacity }]} />
-          {/* Full-image red tint */}
           <Animated.View style={[styles.tint, { backgroundColor: '#F44336', opacity: nopeTintOpacity }]} />
 
-          {/* LIKE stamp */}
           <Animated.View style={[styles.stamp, styles.likeStamp, { opacity: likeProgress }]}>
             <Text style={styles.likeStampText}>LIKE</Text>
           </Animated.View>
 
-          {/* NOPE stamp */}
           <Animated.View style={[styles.stamp, styles.nopeStamp, { opacity: nopeProgress }]}>
             <Text style={styles.nopeStampText}>NOPE</Text>
           </Animated.View>
 
-          {/* Photo */}
           {imageUri ? (
             <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
           ) : (
@@ -146,7 +134,6 @@ const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwi
             </View>
           )}
 
-          {/* Info overlay at bottom */}
           <View style={styles.infoOverlay}>
             <Text style={styles.name} numberOfLines={1}>{restaurant.name}</Text>
             <View style={styles.metaRow}>
@@ -177,7 +164,7 @@ const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwi
 export default SwipeCard;
 
 const BORDER_RADIUS = 20;
-const GLOW_SPREAD = 4; // how far the glow border extends outside the card
+const GLOW_SPREAD = 4;
 
 const styles = StyleSheet.create({
   wrapper: {
