@@ -11,6 +11,7 @@ export function RestaurantProvider({ children }) {
   const [notNowRestaurants, setNotNowRestaurants] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
+  // Load persisted data on mount
   useEffect(() => {
     async function load() {
       try {
@@ -26,11 +27,13 @@ export function RestaurantProvider({ children }) {
     load();
   }, []);
 
+  // Persist liked whenever it changes (skip initial load)
   useEffect(() => {
     if (!loaded) return;
     AsyncStorage.setItem(LIKED_KEY, JSON.stringify(likedRestaurants)).catch(() => {});
   }, [likedRestaurants, loaded]);
 
+  // Persist notNow whenever it changes
   useEffect(() => {
     if (!loaded) return;
     AsyncStorage.setItem(NOT_NOW_KEY, JSON.stringify(notNowRestaurants)).catch(() => {});

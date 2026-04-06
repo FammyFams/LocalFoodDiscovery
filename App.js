@@ -73,27 +73,27 @@ function TabNavigator() {
 export default function App() {
   return (
     <RestaurantProvider>
-        <NavigationContainer>
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Tabs" component={TabNavigator} />
-            <Stack.Screen
-              name="Detail"
-              component={DetailScreen}
-              options={{ headerShown: false, presentation: 'card' }}
-            />
-            <Stack.Screen
-              name="MapPicker"
-              component={MapPickerScreen}
-              options={{ headerShown: false, presentation: 'fullScreenModal' }}
-            />
-            <Stack.Screen
-              name="Decision"
-              component={DecisionScreen}
-              options={{ headerShown: false, presentation: 'fullScreenModal' }}
-            />
-          </Stack.Navigator>
-          <StatusBar style="dark" />
-        </NavigationContainer>
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="Tabs" component={TabNavigator} />
+          <Stack.Screen
+            name="Detail"
+            component={DetailScreen}
+            options={{ headerShown: false, presentation: 'card' }}
+          />
+          <Stack.Screen
+            name="MapPicker"
+            component={MapPickerScreen}
+            options={{ headerShown: false, presentation: 'fullScreenModal' }}
+          />
+          <Stack.Screen
+            name="Decision"
+            component={DecisionScreen}
+            options={{ headerShown: false, presentation: 'fullScreenModal' }}
+          />
+        </Stack.Navigator>
+        <StatusBar style="dark" />
+      </NavigationContainer>
     </RestaurantProvider>
   );
 }
