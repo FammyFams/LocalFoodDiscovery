@@ -157,10 +157,28 @@ export default function DetailScreen({ route, navigation }) {
 
         <View style={styles.divider} />
 
-        {/* Address */}
+        {/* Address + map links */}
         <View style={styles.infoRow}>
           <Text style={styles.infoIcon}>📍</Text>
           <Text style={styles.infoText}>{restaurant.address}</Text>
+        </View>
+        <View style={styles.mapLinksRow}>
+          <TouchableOpacity
+            style={styles.mapLink}
+            onPress={() => Linking.openURL(`https://www.google.com/maps/place/?q=place_id:${restaurant.id}`)}
+          >
+            <Text style={styles.mapLinkText}>🗺️ Google Maps</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.mapLink}
+            onPress={() => Linking.openURL(
+              Platform.OS === 'ios'
+                ? `maps://?q=${encodeURIComponent(restaurant.name)}&address=${encodeURIComponent(restaurant.address)}`
+                : `https://maps.apple.com/?q=${encodeURIComponent(restaurant.name)}`
+            )}
+          >
+            <Text style={styles.mapLinkText}>🍎 Apple Maps</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Phone */}
@@ -279,6 +297,13 @@ const styles = StyleSheet.create({
   infoIcon: { fontSize: 16, marginTop: 1 },
   infoText: { fontSize: 14, color: '#555', flex: 1, lineHeight: 20 },
   link: { color: '#FF6B35', textDecorationLine: 'underline' },
+  mapLinksRow: { flexDirection: 'row', gap: 10, marginBottom: 12, marginLeft: 26 },
+  mapLink: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#F0F4FF', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 7,
+  },
+  mapLinkText: { fontSize: 13, fontWeight: '600', color: '#3B5BDB' },
   chevron: { fontSize: 11, color: '#aaa', marginLeft: 4, marginTop: 3 },
   hoursSection: { marginBottom: 4 },
   hourLine: { fontSize: 13, color: '#777', marginLeft: 28, marginBottom: 3, lineHeight: 19 },

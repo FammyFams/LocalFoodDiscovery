@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
   ScrollView,
   Animated,
   Modal,
-  TextInput,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -20,10 +19,12 @@ import * as Location from 'expo-location';
 import SwipeCard from '../components/SwipeCard';
 import { fetchNearbyRestaurants } from '../services/googlePlaces';
 import Slider from '@react-native-community/slider';
+import { useFocusEffect } from '@react-navigation/native';
+import { consumePendingLocation } from '../services/locationBridge';
 import { useRestaurants } from '../context/RestaurantContext';
 
 const RADIUS_MIN = 0.5;
-const RADIUS_MAX = 31; // Google Places API hard cap (~50km)
+const RADIUS_MAX = 5;
 
 const CUISINE_OPTIONS = [
   { label: 'Any', type: null, emoji: '🍽️' },
@@ -51,7 +52,7 @@ const CUISINE_OPTIONS = [
   { label: 'Vietnamese', type: 'vietnamese_restaurant', emoji: '🫕' },
 ];
 
-export default function MainScreen({ navigation, route }) {
+export default function MainScreen({ navigation }) {
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -62,13 +63,7 @@ export default function MainScreen({ navigation, route }) {
   const radiusTimeout = useRef(null);
   const [cuisineType, setCuisineType] = useState(null);
   const [cuisineModalVisible, setCuisineModalVisible] = useState(false);
-
-  // Location picker modal state
-  const [pickerVisible, setPickerVisible] = useState(false);
-  const [searchText, setSearchText] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const searchTimeout = useRef(null);
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
 
   const { likeRestaurant, dislikeRestaurant, likedRestaurants, notNowRestaurants, clearAll } = useRestaurants();
 
@@ -100,15 +95,18 @@ export default function MainScreen({ navigation, route }) {
     requestCurrentLocation();
   }, []);
 
-  // Handle location picked from map
-  useEffect(() => {
-    const picked = route.params?.pickedLocation;
-    if (picked) {
-      setLocation(picked.coords);
-      setLocationLabel(picked.label);
-      navigation.setParams({ pickedLocation: null });
+  // Pick up location (and optional radius) set by MapPickerScreen when this screen regains focus
+  useFocusEffect(useCallback(() => {
+    const pending = consumePendingLocation();
+    if (pending) {
+      setLocation(pending.coords);
+      setLocationLabel('Selected Location');
+      if (pending.radius != null) {
+        setRadius(pending.radius);
+        setSliderRadius(pending.radius);
+      }
     }
-  }, [route.params?.pickedLocation]);
+  }, []));
 
   // Show decision prompt every 10 likes
   useEffect(() => {
@@ -144,51 +142,8 @@ export default function MainScreen({ navigation, route }) {
     }
   }
 
-  async function handleSearchChange(text) {
-    setSearchText(text);
-    clearTimeout(searchTimeout.current);
-    if (!text.trim()) { setSearchResults([]); return; }
-    searchTimeout.current = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const results = await Location.geocodeAsync(text);
-        // Reverse geocode each result to get readable names
-        const labeled = await Promise.all(
-          results.slice(0, 5).map(async (r) => {
-            const places = await Location.reverseGeocodeAsync(r);
-            const p = places?.[0];
-            const label = [p?.city || p?.district, p?.region, p?.country]
-              .filter(Boolean).join(', ');
-            return { coords: r, label: label || text };
-          })
-        );
-        // Deduplicate by label
-        const seen = new Set();
-        setSearchResults(labeled.filter(({ label }) => {
-          if (seen.has(label)) return false;
-          seen.add(label);
-          return true;
-        }));
-      } catch {
-        setSearchResults([]);
-      } finally {
-        setSearching(false);
-      }
-    }, 500);
-  }
-
-  function selectLocation(coords, label) {
-    setLocation(coords);
-    setLocationLabel(label);
-    setPickerVisible(false);
-    setSearchText('');
-    setSearchResults([]);
-  }
-
   async function useCurrentLocation() {
-    setPickerVisible(false);
-    setSearchText('');
-    setSearchResults([]);
+    setLocationModalVisible(false);
     await requestCurrentLocation();
   }
 
@@ -254,13 +209,13 @@ function removeTopCard(id) {
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>FoodTinder 🍽️</Text>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.locationButton} onPress={() => setPickerVisible(true)}>
+            <TouchableOpacity style={styles.locationButton} onPress={() => setLocationModalVisible(true)}>
               <Text style={styles.locationIcon}>📍</Text>
               <Text style={styles.locationLabel} numberOfLines={1}>{locationLabel}</Text>
               <Text style={styles.locationChevron}>▾</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
-              <Text style={styles.resetButtonText}>↺ Reset</Text>
+              <Text style={styles.resetButtonText}>↺</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -319,10 +274,32 @@ function removeTopCard(id) {
           </View>
         ) : pendingRestaurants.length === 0 ? (
           <View style={styles.centered}>
-            <Text style={styles.errorEmoji}>🎉</Text>
-            <Text style={styles.errorText}>You've seen all nearby places!</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => loadRestaurants(location, radius, cuisineType)}>
-              <Text style={styles.retryText}>Refresh</Text>
+            <Text style={styles.errorEmoji}>🍽️</Text>
+            <Text style={styles.emptyTitle}>You've seen all nearby places!</Text>
+            <Text style={styles.emptySubtitle}>Try one of these to find more:</Text>
+            <TouchableOpacity style={styles.emptyAction} onPress={() => setLocationModalVisible(true)}>
+              <Text style={styles.emptyActionIcon}>📍</Text>
+              <View style={styles.emptyActionText}>
+                <Text style={styles.emptyActionTitle}>Update Location</Text>
+                <Text style={styles.emptyActionSub}>Search in a different area</Text>
+              </View>
+              <Text style={styles.emptyActionChevron}>›</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.emptyAction} onPress={() => navigation.navigate('Liked')}>
+              <Text style={styles.emptyActionIcon}>💚</Text>
+              <View style={styles.emptyActionText}>
+                <Text style={styles.emptyActionTitle}>Review Liked Places</Text>
+                <Text style={styles.emptyActionSub}>Pick somewhere you already saved</Text>
+              </View>
+              <Text style={styles.emptyActionChevron}>›</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.emptyAction} onPress={() => setRadius(Math.min(radius + 1, RADIUS_MAX))}>
+              <Text style={styles.emptyActionIcon}>📏</Text>
+              <View style={styles.emptyActionText}>
+                <Text style={styles.emptyActionTitle}>Increase Distance</Text>
+                <Text style={styles.emptyActionSub}>Currently set to {sliderRadius < 1 ? sliderRadius.toFixed(1) : Math.round(sliderRadius)} mi — tap to expand</Text>
+              </View>
+              <Text style={styles.emptyActionChevron}>›</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -412,6 +389,38 @@ function removeTopCard(id) {
         </View>
       </Modal>
 
+      {/* Location picker modal */}
+      <Modal
+        visible={locationModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setLocationModalVisible(false)}
+      >
+        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setLocationModalVisible(false)} />
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Choose Location</Text>
+
+            <TouchableOpacity style={styles.currentLocButton} onPress={useCurrentLocation}>
+              <Text style={styles.currentLocIcon}>📍</Text>
+              <Text style={styles.currentLocText}>Use Current Location</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.mapButton}
+              onPress={() => {
+                setLocationModalVisible(false);
+                navigation.navigate('MapPicker', { initialCoords: location, initialRadius: radius });
+              }}
+            >
+              <Text style={styles.currentLocIcon}>🗺️</Text>
+              <Text style={styles.mapButtonText}>Pick on Map</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Cuisine picker modal */}
       <Modal
         visible={cuisineModalVisible}
@@ -449,81 +458,6 @@ function removeTopCard(id) {
         </View>
       </Modal>
 
-      {/* Location picker modal */}
-      <Modal
-        visible={pickerVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setPickerVisible(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setPickerVisible(false)} />
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Choose Location</Text>
-
-            {/* Current location button */}
-            <TouchableOpacity style={styles.currentLocButton} onPress={useCurrentLocation}>
-              <Text style={styles.currentLocIcon}>📍</Text>
-              <Text style={styles.currentLocText}>Use Current Location</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.mapButton}
-              onPress={() => {
-                setPickerVisible(false);
-                navigation.navigate('MapPicker', { initialCoords: location });
-              }}
-            >
-              <Text style={styles.currentLocIcon}>🗺️</Text>
-              <Text style={styles.mapButtonText}>Choose on Map</Text>
-            </TouchableOpacity>
-
-            <View style={styles.divider} />
-
-            {/* Search input */}
-            <View style={styles.searchBox}>
-              <Text style={styles.searchIcon}>🔍</Text>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search city or address..."
-                placeholderTextColor="#aaa"
-                value={searchText}
-                onChangeText={handleSearchChange}
-                autoCorrect={false}
-                clearButtonMode="while-editing"
-              />
-              {searching && <ActivityIndicator size="small" color="#FF6B35" />}
-            </View>
-
-            {/* Search results */}
-            <FlatList
-              data={searchResults}
-              keyExtractor={(_, i) => String(i)}
-              keyboardShouldPersistTaps="handled"
-              style={styles.resultsList}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.resultItem}
-                  onPress={() => selectLocation(item.coords, item.label)}
-                >
-                  <Text style={styles.resultIcon}>📌</Text>
-                  <Text style={styles.resultText}>{item.label}</Text>
-                </TouchableOpacity>
-              )}
-              ListEmptyComponent={
-                searchText.length > 0 && !searching ? (
-                  <Text style={styles.noResults}>No results found</Text>
-                ) : null
-              }
-            />
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-
     </SafeAreaView>
   );
 }
@@ -548,11 +482,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 5, maxWidth: 140,
   },
   resetButton: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F44336', borderRadius: 16,
-    paddingHorizontal: 12, paddingVertical: 6,
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: '#F44336',
+    justifyContent: 'center', alignItems: 'center',
   },
-  resetButtonText: { fontSize: 13, color: '#fff', fontWeight: '800' },
+  resetButtonText: { fontSize: 16, color: '#fff', fontWeight: '800' },
   locationIcon: { fontSize: 13 },
   locationLabel: { fontSize: 13, fontWeight: '600', color: '#FF6B35', flex: 1 },
   locationChevron: { fontSize: 11, color: '#FF6B35' },
@@ -587,6 +521,20 @@ const styles = StyleSheet.create({
   loadingText: { marginTop: 16, fontSize: 16, color: '#888' },
   errorEmoji: { fontSize: 52, marginBottom: 12 },
   errorText: { fontSize: 16, color: '#555', textAlign: 'center', lineHeight: 24, marginBottom: 20 },
+  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#222', textAlign: 'center', marginBottom: 6 },
+  emptySubtitle: { fontSize: 14, color: '#999', textAlign: 'center', marginBottom: 24 },
+  emptyAction: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#fff', borderRadius: 16, padding: 16,
+    marginBottom: 10, width: '100%',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07, shadowRadius: 6, elevation: 2,
+  },
+  emptyActionIcon: { fontSize: 24 },
+  emptyActionText: { flex: 1 },
+  emptyActionTitle: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 2 },
+  emptyActionSub: { fontSize: 12, color: '#999' },
+  emptyActionChevron: { fontSize: 20, color: '#ccc', fontWeight: '600' },
   retryButton: { backgroundColor: '#FF6B35', paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24 },
   retryText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 
@@ -605,7 +553,7 @@ const styles = StyleSheet.create({
 likeButton: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#4CAF50' },
   actionButtonText: { fontSize: 26, fontWeight: '700' },
 
-  // Modal
+  // Modal (cuisine picker)
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
   modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
   modalSheet: {
@@ -629,26 +577,9 @@ likeButton: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#4CAF50' },
   mapButton: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: '#F0F4FF', borderRadius: 14,
-    paddingHorizontal: 16, paddingVertical: 14, marginBottom: 12,
+    paddingHorizontal: 16, paddingVertical: 14,
   },
   mapButtonText: { fontSize: 16, fontWeight: '600', color: '#3B5BDB' },
-  divider: { height: 1, backgroundColor: '#f0f0f0', marginBottom: 16 },
-  searchBox: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#f5f5f5', borderRadius: 12,
-    paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12,
-  },
-  searchIcon: { fontSize: 16 },
-  searchInput: { flex: 1, fontSize: 15, color: '#222' },
-  resultsList: { maxHeight: 280 },
-  resultItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f5f5f5',
-  },
-  resultIcon: { fontSize: 16 },
-  resultText: { fontSize: 15, color: '#333', flex: 1 },
-  noResults: { textAlign: 'center', color: '#aaa', paddingVertical: 20, fontSize: 14 },
-
   // Decision prompt
   decisionOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
