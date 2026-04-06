@@ -19,9 +19,37 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import SwipeCard from '../components/SwipeCard';
 import { fetchNearbyRestaurants } from '../services/googlePlaces';
+import Slider from '@react-native-community/slider';
 import { useRestaurants } from '../context/RestaurantContext';
 
-const RADIUS_OPTIONS = [0.5, 1, 2, 3, 5];
+const RADIUS_MIN = 0.5;
+const RADIUS_MAX = 31; // Google Places API hard cap (~50km)
+
+const CUISINE_OPTIONS = [
+  { label: 'Any', type: null, emoji: '🍽️' },
+  { label: 'American', type: 'american_restaurant', emoji: '🍔' },
+  { label: 'Chinese', type: 'chinese_restaurant', emoji: '🥡' },
+  { label: 'French', type: 'french_restaurant', emoji: '🥐' },
+  { label: 'Greek', type: 'greek_restaurant', emoji: '🫒' },
+  { label: 'Indian', type: 'indian_restaurant', emoji: '🍛' },
+  { label: 'Italian', type: 'italian_restaurant', emoji: '🍝' },
+  { label: 'Japanese', type: 'japanese_restaurant', emoji: '🍱' },
+  { label: 'Korean', type: 'korean_restaurant', emoji: '🥘' },
+  { label: 'Lebanese', type: 'lebanese_restaurant', emoji: '🧆' },
+  { label: 'Mediterranean', type: 'mediterranean_restaurant', emoji: '🫙' },
+  { label: 'Mexican', type: 'mexican_restaurant', emoji: '🌮' },
+  { label: 'Middle Eastern', type: 'middle_eastern_restaurant', emoji: '🥙' },
+  { label: 'Pizza', type: 'pizza_restaurant', emoji: '🍕' },
+  { label: 'Ramen', type: 'ramen_restaurant', emoji: '🍜' },
+  { label: 'Seafood', type: 'seafood_restaurant', emoji: '🦞' },
+  { label: 'Steak', type: 'steak_house', emoji: '🥩' },
+  { label: 'Sushi', type: 'sushi_restaurant', emoji: '🍣' },
+  { label: 'Thai', type: 'thai_restaurant', emoji: '🍲' },
+  { label: 'Turkish', type: 'turkish_restaurant', emoji: '🫕' },
+  { label: 'Vegan', type: 'vegan_restaurant', emoji: '🌱' },
+  { label: 'Vegetarian', type: 'vegetarian_restaurant', emoji: '🥗' },
+  { label: 'Vietnamese', type: 'vietnamese_restaurant', emoji: '🫕' },
+];
 
 export default function MainScreen({ navigation, route }) {
   const [restaurants, setRestaurants] = useState([]);
@@ -30,6 +58,10 @@ export default function MainScreen({ navigation, route }) {
   const [location, setLocation] = useState(null);
   const [locationLabel, setLocationLabel] = useState('Current Location');
   const [radius, setRadius] = useState(1);
+  const [sliderRadius, setSliderRadius] = useState(1);
+  const radiusTimeout = useRef(null);
+  const [cuisineType, setCuisineType] = useState(null);
+  const [cuisineModalVisible, setCuisineModalVisible] = useState(false);
 
   // Location picker modal state
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -46,7 +78,7 @@ export default function MainScreen({ navigation, route }) {
       'This will clear all your liked and passed restaurants.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset', style: 'destructive', onPress: () => { clearAll(); setRestaurants([]); if (location) loadRestaurants(location, radius); } },
+        { text: 'Reset', style: 'destructive', onPress: () => { clearAll(); setRestaurants([]); if (location) loadRestaurants(location, radius, cuisineType); } },
       ]
     );
   }
@@ -90,9 +122,9 @@ export default function MainScreen({ navigation, route }) {
   useEffect(() => {
     if (location) {
       setRestaurants([]);
-      loadRestaurants(location, radius);
+      loadRestaurants(location, radius, cuisineType);
     }
-  }, [location, radius]);
+  }, [location, radius, cuisineType]);
 
   // ── Location helpers ──────────────────────────────────────────
 
@@ -162,7 +194,7 @@ export default function MainScreen({ navigation, route }) {
 
   // ── Restaurant loading ────────────────────────────────────────
 
-  async function loadRestaurants(loc, rad) {
+  async function loadRestaurants(loc, rad, cuisine) {
     if (isFetching.current) return;
     isFetching.current = true;
     setLoading(true);
@@ -172,6 +204,7 @@ export default function MainScreen({ navigation, route }) {
         latitude: loc.latitude,
         longitude: loc.longitude,
         radiusMiles: rad,
+        cuisineType: cuisine,
       });
       setRestaurants(results);
     } catch (e) {
@@ -192,11 +225,11 @@ export default function MainScreen({ navigation, route }) {
     removeTopCard(restaurant.id);
   }
 
-  function removeTopCard(id) {
+function removeTopCard(id) {
     setRestaurants((prev) => {
       const remaining = prev.filter((r) => r.id !== id);
       if (remaining.length < 5 && location && !isFetching.current) {
-        loadRestaurants(location, radius);
+        loadRestaurants(location, radius, cuisineType);
       }
       return remaining;
     });
@@ -231,19 +264,34 @@ export default function MainScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.radiusRow}>
-          {RADIUS_OPTIONS.map((r) => (
-            <TouchableOpacity
-              key={r}
-              style={[styles.radiusChip, radius === r && styles.radiusChipActive]}
-              onPress={() => setRadius(r)}
-            >
-              <Text style={[styles.radiusChipText, radius === r && styles.radiusChipTextActive]}>
-                {r} mi
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View style={styles.filtersRow}>
+          <View style={styles.sliderRow}>
+            <Text style={styles.sliderLabel}>📍 {sliderRadius < 1 ? sliderRadius.toFixed(1) : Math.round(sliderRadius)} mi</Text>
+            <Slider
+              style={styles.slider}
+              minimumValue={RADIUS_MIN}
+              maximumValue={RADIUS_MAX}
+              value={sliderRadius}
+              step={0.5}
+              minimumTrackTintColor="#FF6B35"
+              maximumTrackTintColor="#ddd"
+              thumbTintColor="#FF6B35"
+              onValueChange={(val) => {
+                setSliderRadius(val);
+                clearTimeout(radiusTimeout.current);
+                radiusTimeout.current = setTimeout(() => setRadius(val), 400);
+              }}
+            />
+            <Text style={styles.sliderMax}>{RADIUS_MAX} mi</Text>
+          </View>
+          <TouchableOpacity style={[styles.cuisineChip, cuisineType && styles.cuisineChipActive]} onPress={() => setCuisineModalVisible(true)}>
+            <Text style={styles.cuisineChipText}>
+              {CUISINE_OPTIONS.find((c) => c.type === cuisineType)?.emoji ?? '🍽️'}{' '}
+              {CUISINE_OPTIONS.find((c) => c.type === cuisineType)?.label ?? 'Any'}
+            </Text>
+            <Text style={styles.cuisineChevron}>▾</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Card area */}
@@ -273,7 +321,7 @@ export default function MainScreen({ navigation, route }) {
           <View style={styles.centered}>
             <Text style={styles.errorEmoji}>🎉</Text>
             <Text style={styles.errorText}>You've seen all nearby places!</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => loadRestaurants(location, radius)}>
+            <TouchableOpacity style={styles.retryButton} onPress={() => loadRestaurants(location, radius, cuisineType)}>
               <Text style={styles.retryText}>Refresh</Text>
             </TouchableOpacity>
           </View>
@@ -308,7 +356,7 @@ export default function MainScreen({ navigation, route }) {
               <Text style={styles.actionButtonText}>✕</Text>
             </TouchableOpacity>
           </Animated.View>
-          <Animated.View style={{ transform: [{ scale: likeScale }] }}>
+<Animated.View style={{ transform: [{ scale: likeScale }] }}>
             <TouchableOpacity
               style={[styles.actionButton, styles.likeButton]}
               onPress={() => { animateButton(likeScale); topCardRef.current?.swipeRight(); }}
@@ -360,6 +408,43 @@ export default function MainScreen({ navigation, route }) {
             <TouchableOpacity onPress={() => setDecisionPrompt(false)} style={styles.decisionDismiss}>
               <Text style={styles.decisionDismissText}>Keep Swiping</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cuisine picker modal */}
+      <Modal
+        visible={cuisineModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setCuisineModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setCuisineModalVisible(false)} />
+          <View style={[styles.modalSheet, styles.cuisineSheet]}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>What are you in the mood for?</Text>
+            <FlatList
+              data={CUISINE_OPTIONS}
+              keyExtractor={(item) => item.label}
+              numColumns={3}
+              columnWrapperStyle={styles.cuisineGrid}
+              renderItem={({ item }) => {
+                const active = cuisineType === item.type;
+                return (
+                  <TouchableOpacity
+                    style={[styles.cuisineOption, active && styles.cuisineOptionActive]}
+                    onPress={() => { setCuisineType(item.type); setCuisineModalVisible(false); }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={styles.cuisineOptionEmoji}>{item.emoji}</Text>
+                    <Text style={[styles.cuisineOptionLabel, active && styles.cuisineOptionLabelActive]} numberOfLines={1}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }}
+            />
           </View>
         </View>
       </Modal>
@@ -471,14 +556,30 @@ const styles = StyleSheet.create({
   locationIcon: { fontSize: 13 },
   locationLabel: { fontSize: 13, fontWeight: '600', color: '#FF6B35', flex: 1 },
   locationChevron: { fontSize: 11, color: '#FF6B35' },
-  radiusRow: { flexDirection: 'row', gap: 8 },
-  radiusChip: {
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
+  filtersRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  sliderRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  slider: { flex: 1, height: 36 },
+  sliderLabel: { fontSize: 12, fontWeight: '700', color: '#FF6B35', minWidth: 42 },
+  sliderMax: { fontSize: 11, color: '#aaa', minWidth: 38, textAlign: 'right' },
+  cuisineChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
     borderWidth: 1.5, borderColor: '#ddd', backgroundColor: '#fff',
   },
-  radiusChipActive: { borderColor: '#FF6B35', backgroundColor: '#FF6B35' },
-  radiusChipText: { fontSize: 13, fontWeight: '600', color: '#666' },
-  radiusChipTextActive: { color: '#fff' },
+  cuisineChipActive: { borderColor: '#FF6B35', backgroundColor: '#FFF0E8' },
+  cuisineChipText: { fontSize: 13, fontWeight: '600', color: '#444' },
+  cuisineChevron: { fontSize: 11, color: '#888' },
+  cuisineSheet: { maxHeight: '75%' },
+  cuisineGrid: { justifyContent: 'space-between', marginBottom: 12 },
+  cuisineOption: {
+    flex: 1, marginHorizontal: 4, paddingVertical: 14,
+    borderRadius: 14, backgroundColor: '#f5f5f5',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cuisineOptionActive: { backgroundColor: '#FF6B35' },
+  cuisineOptionEmoji: { fontSize: 26, marginBottom: 4 },
+  cuisineOptionLabel: { fontSize: 11, fontWeight: '600', color: '#444', textAlign: 'center' },
+  cuisineOptionLabelActive: { color: '#fff' },
 
   // Card area
   cardArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -501,7 +602,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
   },
   nopeButton: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#F44336' },
-  likeButton: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#4CAF50' },
+likeButton: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#4CAF50' },
   actionButtonText: { fontSize: 26, fontWeight: '700' },
 
   // Modal

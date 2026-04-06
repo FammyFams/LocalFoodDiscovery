@@ -2,8 +2,10 @@ import { GOOGLE_API_KEY } from '../config';
 
 const BASE_URL = 'https://places.googleapis.com/v1/places:searchNearby';
 
+const MAX_RADIUS_MILES = 31; // Google Places API cap (~50km)
+
 function milesToMeters(miles) {
-  return Math.min(Math.round(miles * 1609.34), 50000);
+  return Math.round(Math.min(miles, MAX_RADIUS_MILES) * 1609.34);
 }
 
 function getPhotoUrl(photoName) {
@@ -21,6 +23,50 @@ function parsePriceLevel(level) {
   return map[level] ?? 1;
 }
 
+// Known global/national chains that slip through the API type filter.
+// Checked as a substring of the lowercased place name so "McDonald's Express" is also caught.
+const CHAIN_PATTERNS = [
+  // Burgers / fast food
+  "mcdonald", "burger king", "wendy's", "wendys", "jack in the box",
+  "five guys", "in-n-out", "culver's",
+  "dairy queen", "hardee's", "carl's jr", "fatburger",
+  "habit burger", "sonic drive", "steak 'n shake",
+  // Chicken
+  "kfc", "popeyes", "chick-fil-a", "raising cane", "zaxby's", "wingstop",
+  "wing stop", "buffalo wild wings",
+  // Pizza
+  "pizza hut", "domino's", "little caesars", "papa john", "papa murphy",
+  "mod pizza", "blaze pizza",
+  // Mexican fast food
+  "taco bell", "del taco", "qdoba", "moe's southwest",
+  // Subs / sandwiches
+  "subway", "jersey mike", "jimmy john", "firehouse subs", "quiznos",
+  "blimpie", "jason's deli",
+  // Casual dining chains
+  "applebee's", "chili's", "olive garden", "red lobster", "tgi friday",
+  "outback steakhouse", "longhorn steakhouse", "texas roadhouse",
+  "cracker barrel", "golden corral", "ruby tuesday", "red robin",
+  "bob evans", "perkins restaurant",
+  // Breakfast chains
+  "ihop", "denny's", "waffle house",
+  // Asian fast casual
+  "panda express",
+  // Burritos / bowls
+  "chipotle",
+  // Noodles / other
+  "noodles & company", "panera", "boston market", "el pollo loco",
+  // Coffee (when they show up as food)
+  "starbucks", "dunkin'", "dunkin donuts", "tim hortons", "dutch bros",
+  // Convenience / gas station food
+  "7-eleven", "7 eleven", "circle k", "wawa", "sheetz", "quiktrip",
+  "casey's general",
+];
+
+function isGlobalChain(name) {
+  const lower = name.toLowerCase();
+  return CHAIN_PATTERNS.some((pattern) => lower.includes(pattern));
+}
+
 function parseTypes(types = []) {
   const skip = new Set(['restaurant', 'food', 'point_of_interest', 'establishment', 'store']);
   return types
@@ -29,9 +75,10 @@ function parseTypes(types = []) {
     .slice(0, 4);
 }
 
-export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles = 1 }) {
+export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles = 1, cuisineType = null }) {
   const body = {
-    includedTypes: ['restaurant'],
+    includedTypes: [cuisineType ?? 'restaurant'],
+    excludedTypes: ['fast_food_restaurant', 'convenience_store'],
     maxResultCount: 20,
     locationRestriction: {
       circle: {
@@ -81,7 +128,9 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
 
   const data = await response.json();
 
-  return (data.places || []).map((place) => ({
+  return (data.places || [])
+    .filter((place) => !isGlobalChain(place.displayName?.text ?? ''))
+    .map((place) => ({
     id: place.id,
     name: place.displayName?.text ?? 'Unknown',
     distance: null,
