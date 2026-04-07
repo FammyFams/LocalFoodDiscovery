@@ -66,8 +66,9 @@ export default function MainScreen({ navigation }) {
   const [radius, setRadius] = useState(1);
   const [sliderRadius, setSliderRadius] = useState(1);
   const radiusTimeout = useRef(null);
-  const [cuisineType, setCuisineType] = useState(null);
+  const [cuisineTypes, setCuisineTypes] = useState([]);
   const [noFastFood, setNoFastFood] = useState(false);
+  const [noConvenienceStore, setNoConvenienceStore] = useState(false);
   const [cuisineModalVisible, setCuisineModalVisible] = useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -80,7 +81,7 @@ export default function MainScreen({ navigation }) {
       'This will clear all your liked and passed restaurants.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset', style: 'destructive', onPress: () => { clearAll(); setRestaurants([]); if (location) loadRestaurants(location, radius, cuisineType, noFastFood); } },
+        { text: 'Reset', style: 'destructive', onPress: () => { clearAll(); setRestaurants([]); if (location) loadRestaurants(location, radius, cuisineTypes, noFastFood, noConvenienceStore); } },
       ]
     );
   }
@@ -130,9 +131,9 @@ export default function MainScreen({ navigation }) {
   useEffect(() => {
     if (location) {
       setRestaurants([]);
-      loadRestaurants(location, radius, cuisineType, noFastFood);
+      loadRestaurants(location, radius, cuisineTypes, noFastFood, noConvenienceStore);
     }
-  }, [location, radius, cuisineType, noFastFood]);
+  }, [location, radius, cuisineTypes, noFastFood, noConvenienceStore]);
 
   // ── Location helpers ──────────────────────────────────────────
 
@@ -159,7 +160,7 @@ export default function MainScreen({ navigation }) {
 
   // ── Restaurant loading ────────────────────────────────────────
 
-  async function loadRestaurants(loc, rad, cuisine, excludeFastFood = false) {
+  async function loadRestaurants(loc, rad, cuisines, excludeFastFood = false, excludeConvenience = false) {
     if (isFetching.current) return;
     isFetching.current = true;
     setLoading(true);
@@ -169,8 +170,9 @@ export default function MainScreen({ navigation }) {
         latitude: loc.latitude,
         longitude: loc.longitude,
         radiusMiles: rad,
-        cuisineType: cuisine,
+        cuisineTypes: cuisines,
         noFastFood: excludeFastFood,
+        noConvenienceStore: excludeConvenience,
       });
       setRestaurants(results);
     } catch (e) {
@@ -195,7 +197,7 @@ function removeTopCard(id) {
     setRestaurants((prev) => {
       const remaining = prev.filter((r) => r.id !== id);
       if (remaining.length < 5 && location && !isFetching.current) {
-        loadRestaurants(location, radius, cuisineType, noFastFood);
+        loadRestaurants(location, radius, cuisineTypes, noFastFood, noConvenienceStore);
       }
       return remaining;
     });
@@ -268,14 +270,23 @@ function removeTopCard(id) {
             />
             <Text style={styles.sliderMax}>{RADIUS_MAX} mi</Text>
           </View>
-          <TouchableOpacity style={[styles.cuisineChip, (cuisineType || noFastFood) && styles.cuisineChipActive]} onPress={() => setCuisineModalVisible(true)}>
-            <Text style={[styles.cuisineChipText, (cuisineType || noFastFood) && { color: '#fff' }]}>
-              {CUISINE_OPTIONS.find((c) => c.type === cuisineType)?.emoji ?? '🍽️'}{' '}
-              {CUISINE_OPTIONS.find((c) => c.type === cuisineType)?.label ?? 'Any'}
-              {noFastFood ? '  🚫🍟' : ''}
-            </Text>
-            <Text style={[styles.cuisineChevron, (cuisineType || noFastFood) && { color: 'rgba(255,255,255,0.6)' }]}>▾</Text>
-          </TouchableOpacity>
+          {(() => {
+            const hasFilters = cuisineTypes.length > 0 || noFastFood || noConvenienceStore;
+            let label, emoji;
+            if (cuisineTypes.length === 0) { label = 'Any'; emoji = '🍽️'; }
+            else if (cuisineTypes.length === 1) {
+              const opt = CUISINE_OPTIONS.find((c) => c.type === cuisineTypes[0]);
+              label = opt?.label ?? 'Custom'; emoji = opt?.emoji ?? '🍽️';
+            } else { label = `${cuisineTypes.length} Cuisines`; emoji = '🍽️'; }
+            return (
+              <TouchableOpacity style={[styles.cuisineChip, hasFilters && styles.cuisineChipActive]} onPress={() => setCuisineModalVisible(true)}>
+                <Text style={[styles.cuisineChipText, hasFilters && { color: '#fff' }]}>
+                  {emoji} {label}{noFastFood ? '  🚫🍟' : ''}{noConvenienceStore ? '  🚫🏪' : ''}
+                </Text>
+                <Text style={[styles.cuisineChevron, hasFilters && { color: 'rgba(255,255,255,0.6)' }]}>▾</Text>
+              </TouchableOpacity>
+            );
+          })()}
         </View>
       </View>
 
@@ -440,26 +451,51 @@ function removeTopCard(id) {
           <View style={[styles.modalSheet, styles.cuisineSheet]}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>What are you in the mood for?</Text>
-            <TouchableOpacity
-              style={[styles.noFastFoodChip, noFastFood && styles.noFastFoodChipActive]}
-              onPress={() => setNoFastFood(!noFastFood)}
-              activeOpacity={0.75}
-            >
-              <Text style={[styles.noFastFoodText, noFastFood && styles.noFastFoodTextActive]}>
-                🚫🍟  No Fast Food
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.filterChipsRow}>
+              <TouchableOpacity
+                style={[styles.noFastFoodChip, noFastFood && styles.noFastFoodChipActive]}
+                onPress={() => setNoFastFood(!noFastFood)}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.noFastFoodText, noFastFood && styles.noFastFoodTextActive]}>
+                  🚫🍟  No Fast Food
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.noFastFoodChip, noConvenienceStore && styles.noFastFoodChipActive]}
+                onPress={() => setNoConvenienceStore(!noConvenienceStore)}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.noFastFoodText, noConvenienceStore && styles.noFastFoodTextActive]}>
+                  🚫🏪  No Convenience Stores
+                </Text>
+              </TouchableOpacity>
+            </View>
             <FlatList
               data={CUISINE_OPTIONS}
               keyExtractor={(item) => item.label}
               numColumns={3}
               columnWrapperStyle={styles.cuisineGrid}
               renderItem={({ item }) => {
-                const active = cuisineType === item.type;
+                const active = item.type === null
+                  ? cuisineTypes.length === 0 && !noFastFood && !noConvenienceStore
+                  : cuisineTypes.includes(item.type);
                 return (
                   <TouchableOpacity
                     style={[styles.cuisineOption, active && styles.cuisineOptionActive]}
-                    onPress={() => { setCuisineType(item.type); setCuisineModalVisible(false); }}
+                    onPress={() => {
+                      if (item.type === null) {
+                        setCuisineTypes([]);
+                        setNoFastFood(false);
+                        setNoConvenienceStore(false);
+                      } else {
+                        setCuisineTypes((prev) =>
+                          prev.includes(item.type)
+                            ? prev.filter((t) => t !== item.type)
+                            : [...prev, item.type]
+                        );
+                      }
+                    }}
                     activeOpacity={0.75}
                   >
                     <Text style={styles.cuisineOptionEmoji}>{item.emoji}</Text>
@@ -470,6 +506,11 @@ function removeTopCard(id) {
                 );
               }}
             />
+            <TouchableOpacity style={styles.cuisineDoneButton} onPress={() => setCuisineModalVisible(false)}>
+              <Text style={styles.cuisineDoneText}>
+                {cuisineTypes.length > 0 ? `Show Results (${cuisineTypes.length} selected)` : 'Done'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -549,9 +590,12 @@ const styles = StyleSheet.create({
   slider: { flex: 1, height: 36 },
   sliderLabel: { fontSize: 12, fontWeight: '600', color: '#212529', minWidth: 42 },
   sliderMax: { fontSize: 11, color: '#868e96', minWidth: 38, textAlign: 'right' },
+  filterChipsRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12,
+  },
   noFastFoodChip: {
-    alignSelf: 'center', paddingHorizontal: 16, paddingVertical: 10,
-    borderRadius: 12, backgroundColor: '#f1f3f5', marginBottom: 12,
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 12, backgroundColor: '#f1f3f5',
   },
   noFastFoodChipActive: { backgroundColor: '#212529' },
   noFastFoodText: { fontSize: 14, fontWeight: '600', color: '#495057' },
@@ -564,7 +608,12 @@ const styles = StyleSheet.create({
   cuisineChipActive: { backgroundColor: '#212529' },
   cuisineChipText: { fontSize: 13, fontWeight: '500', color: '#495057' },
   cuisineChevron: { fontSize: 10, color: '#868e96' },
-  cuisineSheet: { maxHeight: '75%' },
+  cuisineSheet: { maxHeight: '75%', paddingBottom: 20 },
+  cuisineDoneButton: {
+    backgroundColor: '#212529', borderRadius: 14,
+    paddingVertical: 14, alignItems: 'center', marginTop: 8, marginBottom: 8,
+  },
+  cuisineDoneText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   cuisineGrid: { justifyContent: 'space-between', marginBottom: 10 },
   cuisineOption: {
     flex: 1, marginHorizontal: 3, paddingVertical: 12,

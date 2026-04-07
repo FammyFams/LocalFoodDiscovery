@@ -75,10 +75,14 @@ function parseTypes(types = []) {
     .slice(0, 4);
 }
 
-export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles = 1, cuisineType = null, noFastFood = false }) {
+export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles = 1, cuisineTypes = [], noFastFood = false, noConvenienceStore = false }) {
+  const excludedTypes = [
+    ...(noFastFood ? ['fast_food_restaurant'] : []),
+    ...(noConvenienceStore ? ['convenience_store', 'gas_station'] : []),
+  ];
   const body = {
-    includedTypes: [cuisineType ?? 'restaurant'],
-    ...(noFastFood && { excludedTypes: ['fast_food_restaurant'] }),
+    includedTypes: cuisineTypes.length > 0 ? cuisineTypes : ['restaurant'],
+    ...(excludedTypes.length > 0 && { excludedTypes }),
     maxResultCount: 20,
     locationRestriction: {
       circle: {
@@ -128,7 +132,7 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
 
   const data = await response.json();
 
-  const filtered = (data.places || []);
+  const filtered = (data.places || []).filter((place) => !isGlobalChain(place.displayName?.text ?? ''));
 
   // Shuffle so the order feels random each time
   for (let i = filtered.length - 1; i > 0; i--) {
