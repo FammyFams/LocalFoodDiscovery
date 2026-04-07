@@ -60,11 +60,11 @@ export default function MapPickerScreen({ navigation, route }) {
       >
         {marker && (
           <>
-            <Marker coordinate={marker} pinColor="#FF6B35" />
+            <Marker coordinate={marker} pinColor="#34AFA9" />
             <Circle
               center={marker}
               radius={milesToMeters(radius)}
-              strokeColor="#FF6B35"
+              strokeColor="#34AFA9"
               strokeWidth={2}
               fillColor="rgba(255,107,53,0.12)"
             />
@@ -86,9 +86,9 @@ export default function MapPickerScreen({ navigation, route }) {
             maximumValue={RADIUS_MAX}
             value={radius}
             step={0.5}
-            minimumTrackTintColor="#FF6B35"
+            minimumTrackTintColor="#34AFA9"
             maximumTrackTintColor="#ddd"
-            thumbTintColor="#FF6B35"
+            thumbTintColor="#34AFA9"
             onValueChange={setRadius}
           />
           <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
@@ -130,12 +130,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4,
   },
   sliderLabel: { fontSize: 15, fontWeight: '700', color: '#333' },
-  sliderValue: { fontSize: 15, fontWeight: '700', color: '#FF6B35' },
+  sliderValue: { fontSize: 15, fontWeight: '700', color: '#34AFA9' },
   slider: { width: '100%', height: 36, marginBottom: 16 },
   confirmButton: {
-    backgroundColor: '#FF6B35', borderRadius: 16,
+    backgroundColor: '#34AFA9', borderRadius: 16,
     paddingVertical: 16, alignItems: 'center',
-    shadowColor: '#FF6B35', shadowOffset: { width: 0, height: 4 },
+    shadowColor: '#34AFA9', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
   },
   confirmText: { color: '#fff', fontSize: 17, fontWeight: '700' },

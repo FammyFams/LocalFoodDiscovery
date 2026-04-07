@@ -7,7 +7,7 @@ const FONT_PATH = path.join(
 );
 
 async function generateIcon(size, outputPath) {
-  const img = new Jimp({ width: size, height: size, color: 0xff6b35ff });
+  const img = new Jimp({ width: size, height: size, color: 0x212529ff });
   const font = await loadFont(FONT_PATH);
 
   img.print({

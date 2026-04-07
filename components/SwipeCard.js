@@ -126,8 +126,8 @@ const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwi
       <View style={styles.card}>
         <TouchableOpacity activeOpacity={0.95} onPress={() => isTop && onPress(restaurant)} style={styles.touchable}>
 
-          <Animated.View style={[styles.tint, { backgroundColor: '#4CAF50', opacity: likeTintOpacity }]} />
-          <Animated.View style={[styles.tint, { backgroundColor: '#F44336', opacity: nopeTintOpacity }]} />
+          <Animated.View style={[styles.tint, { backgroundColor: '#51cf66', opacity: likeTintOpacity }]} />
+          <Animated.View style={[styles.tint, { backgroundColor: '#ff6b6b', opacity: nopeTintOpacity }]} />
 
           <Animated.View style={[styles.stamp, styles.likeStamp, { opacity: likeProgress }]}>
             <Text style={styles.likeStampText}>LIKE</Text>
@@ -174,8 +174,8 @@ const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwi
 
 export default SwipeCard;
 
-const BORDER_RADIUS = 20;
-const GLOW_SPREAD = 4;
+const BORDER_RADIUS = 18;
+const GLOW_SPREAD = 3;
 
 const styles = StyleSheet.create({
   wrapper: {
@@ -194,20 +194,20 @@ const styles = StyleSheet.create({
     borderWidth: GLOW_SPREAD,
   },
   likeGlow: {
-    borderColor: '#4CAF50',
-    shadowColor: '#4CAF50',
+    borderColor: '#51cf66',
+    shadowColor: '#51cf66',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 20,
+    shadowOpacity: 0.8,
+    shadowRadius: 16,
+    elevation: 16,
   },
   nopeGlow: {
-    borderColor: '#F44336',
-    shadowColor: '#F44336',
+    borderColor: '#ff6b6b',
+    shadowColor: '#ff6b6b',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 20,
+    shadowOpacity: 0.8,
+    shadowRadius: 16,
+    elevation: 16,
   },
   card: {
     flex: 1,
@@ -216,15 +216,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   touchable: { flex: 1 },
   image: { position: 'absolute', width: '100%', height: '100%' },
   imagePlaceholder: {
     width: '100%', height: '100%',
-    backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#E8E8ED', justifyContent: 'center', alignItems: 'center',
   },
   tint: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -232,34 +232,35 @@ const styles = StyleSheet.create({
   },
   stamp: {
     position: 'absolute', top: 44, zIndex: 10,
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderWidth: 4, borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 3, borderRadius: 6,
   },
   likeStamp: {
     left: 20,
-    borderColor: '#4CAF50',
+    borderColor: '#51cf66',
     transform: [{ rotate: '-22deg' }],
   },
   nopeStamp: {
     right: 20,
-    borderColor: '#F44336',
+    borderColor: '#ff6b6b',
     transform: [{ rotate: '22deg' }],
   },
   likeStampText: {
-    fontSize: 24, fontWeight: '900', color: '#4CAF50', letterSpacing: 2,
+    fontSize: 22, fontWeight: '800', color: '#51cf66', letterSpacing: 2,
   },
   nopeStampText: {
-    fontSize: 24, fontWeight: '900', color: '#F44336', letterSpacing: 2,
+    fontSize: 22, fontWeight: '800', color: '#ff6b6b', letterSpacing: 2,
   },
   infoOverlay: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 18, paddingTop: 14, paddingBottom: 18,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 18, borderTopRightRadius: 18,
     zIndex: 3,
   },
-  name: { fontSize: 24, fontWeight: '700', color: '#fff', marginBottom: 4 },
+  name: { fontSize: 20, fontWeight: '700', color: '#212529', marginBottom: 4, letterSpacing: -0.3 },
   metaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },
-  metaText: { fontSize: 14, color: 'rgba(255,255,255,0.9)', fontWeight: '500' },
-  cuisine: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 3 },
-  address: { fontSize: 13, color: 'rgba(255,255,255,0.7)' },
+  metaText: { fontSize: 13, color: '#495057', fontWeight: '500' },
+  cuisine: { fontSize: 12, color: '#868e96', marginBottom: 2 },
+  address: { fontSize: 12, color: '#adb5bd' },
 });

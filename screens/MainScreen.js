@@ -22,6 +22,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { consumePendingLocation } from '../services/locationBridge';
 import { useRestaurants } from '../context/RestaurantContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../context/ThemeContext';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const COMPACT_HEADER = SCREEN_WIDTH < 400;
@@ -56,6 +57,7 @@ const CUISINE_OPTIONS = [
 ];
 
 export default function MainScreen({ navigation }) {
+  const t = useTheme();
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -65,6 +67,7 @@ export default function MainScreen({ navigation }) {
   const [sliderRadius, setSliderRadius] = useState(1);
   const radiusTimeout = useRef(null);
   const [cuisineType, setCuisineType] = useState(null);
+  const [noFastFood, setNoFastFood] = useState(false);
   const [cuisineModalVisible, setCuisineModalVisible] = useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -77,7 +80,7 @@ export default function MainScreen({ navigation }) {
       'This will clear all your liked and passed restaurants.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset', style: 'destructive', onPress: () => { clearAll(); setRestaurants([]); if (location) loadRestaurants(location, radius, cuisineType); } },
+        { text: 'Reset', style: 'destructive', onPress: () => { clearAll(); setRestaurants([]); if (location) loadRestaurants(location, radius, cuisineType, noFastFood); } },
       ]
     );
   }
@@ -127,9 +130,9 @@ export default function MainScreen({ navigation }) {
   useEffect(() => {
     if (location) {
       setRestaurants([]);
-      loadRestaurants(location, radius, cuisineType);
+      loadRestaurants(location, radius, cuisineType, noFastFood);
     }
-  }, [location, radius, cuisineType]);
+  }, [location, radius, cuisineType, noFastFood]);
 
   // ── Location helpers ──────────────────────────────────────────
 
@@ -156,7 +159,7 @@ export default function MainScreen({ navigation }) {
 
   // ── Restaurant loading ────────────────────────────────────────
 
-  async function loadRestaurants(loc, rad, cuisine) {
+  async function loadRestaurants(loc, rad, cuisine, excludeFastFood = false) {
     if (isFetching.current) return;
     isFetching.current = true;
     setLoading(true);
@@ -167,6 +170,7 @@ export default function MainScreen({ navigation }) {
         longitude: loc.longitude,
         radiusMiles: rad,
         cuisineType: cuisine,
+        noFastFood: excludeFastFood,
       });
       setRestaurants(results);
     } catch (e) {
@@ -191,7 +195,7 @@ function removeTopCard(id) {
     setRestaurants((prev) => {
       const remaining = prev.filter((r) => r.id !== id);
       if (remaining.length < 5 && location && !isFetching.current) {
-        loadRestaurants(location, radius, cuisineType);
+        loadRestaurants(location, radius, cuisineType, noFastFood);
       }
       return remaining;
     });
@@ -209,12 +213,12 @@ function removeTopCard(id) {
   // ── Render ────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: t.surface, borderBottomColor: t.separator }]}>
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>{COMPACT_HEADER ? '🍽️ Food' : 'foodFinder 🍽️'}</Text>
+          <Text style={[styles.headerTitle, { color: t.text }]}>{COMPACT_HEADER ? '🍽️ Food' : 'foodFinder 🍽️'}</Text>
           <View style={styles.headerRight}>
             <View>
               <TouchableOpacity style={styles.locationButton} onPress={() => setLocationModalVisible(!locationModalVisible)}>
@@ -253,9 +257,9 @@ function removeTopCard(id) {
               maximumValue={RADIUS_MAX}
               value={sliderRadius}
               step={0.5}
-              minimumTrackTintColor="#FF6B35"
+              minimumTrackTintColor="#212529"
               maximumTrackTintColor="#ddd"
-              thumbTintColor="#FF6B35"
+              thumbTintColor="#212529"
               onValueChange={(val) => {
                 setSliderRadius(val);
                 clearTimeout(radiusTimeout.current);
@@ -264,12 +268,13 @@ function removeTopCard(id) {
             />
             <Text style={styles.sliderMax}>{RADIUS_MAX} mi</Text>
           </View>
-          <TouchableOpacity style={[styles.cuisineChip, cuisineType && styles.cuisineChipActive]} onPress={() => setCuisineModalVisible(true)}>
-            <Text style={styles.cuisineChipText}>
+          <TouchableOpacity style={[styles.cuisineChip, (cuisineType || noFastFood) && styles.cuisineChipActive]} onPress={() => setCuisineModalVisible(true)}>
+            <Text style={[styles.cuisineChipText, (cuisineType || noFastFood) && { color: '#fff' }]}>
               {CUISINE_OPTIONS.find((c) => c.type === cuisineType)?.emoji ?? '🍽️'}{' '}
               {CUISINE_OPTIONS.find((c) => c.type === cuisineType)?.label ?? 'Any'}
+              {noFastFood ? '  🚫🍟' : ''}
             </Text>
-            <Text style={styles.cuisineChevron}>▾</Text>
+            <Text style={[styles.cuisineChevron, (cuisineType || noFastFood) && { color: 'rgba(255,255,255,0.6)' }]}>▾</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -278,7 +283,7 @@ function removeTopCard(id) {
       <View style={styles.cardArea}>
         {loading && pendingRestaurants.length === 0 ? (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#FF6B35" />
+            <ActivityIndicator size="large" color="#212529" />
             <Text style={styles.loadingText}>Finding places near you...</Text>
           </View>
         ) : error ? (
@@ -318,7 +323,7 @@ function removeTopCard(id) {
               </View>
               <Text style={styles.emptyActionChevron}>›</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.emptyAction} onPress={() => setRadius(Math.min(radius + 1, RADIUS_MAX))}>
+            <TouchableOpacity style={styles.emptyAction} onPress={() => { const newR = Math.min(radius + 1, RADIUS_MAX); setRadius(newR); setSliderRadius(newR); }}>
               <Text style={styles.emptyActionIcon}>📏</Text>
               <View style={styles.emptyActionText}>
                 <Text style={styles.emptyActionTitle}>Increase Distance</Text>
@@ -348,7 +353,7 @@ function removeTopCard(id) {
 
       {/* Action buttons */}
       {pendingRestaurants.length > 0 && !loading && (
-        <View style={styles.actionRow}>
+        <View style={[styles.actionRow, { backgroundColor: t.surface, borderTopColor: t.separator }]}>
           <Animated.View style={{ transform: [{ scale: nopeScale }] }}>
             <TouchableOpacity
               style={[styles.actionButton, styles.nopeButton]}
@@ -435,6 +440,15 @@ function removeTopCard(id) {
           <View style={[styles.modalSheet, styles.cuisineSheet]}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>What are you in the mood for?</Text>
+            <TouchableOpacity
+              style={[styles.noFastFoodChip, noFastFood && styles.noFastFoodChipActive]}
+              onPress={() => setNoFastFood(!noFastFood)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.noFastFoodText, noFastFood && styles.noFastFoodTextActive]}>
+                🚫🍟  No Fast Food
+              </Text>
+            </TouchableOpacity>
             <FlatList
               data={CUISINE_OPTIONS}
               keyExtractor={(item) => item.label}
@@ -489,168 +503,175 @@ function removeTopCard(id) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF9F5' },
+  container: { flex: 1, backgroundColor: '#f5f6f7' },
 
   // Header
   header: {
-    paddingTop: 12, paddingHorizontal: 20, paddingBottom: 12,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
-    zIndex: 100,
+    paddingTop: 8, paddingHorizontal: 16, paddingBottom: 10,
+    backgroundColor: '#ffffff', borderBottomWidth: 0, zIndex: 100,
   },
   headerTop: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: 10,
+    justifyContent: 'space-between', marginBottom: 8,
   },
-  headerTitle: { fontSize: COMPACT_HEADER ? 20 : 26, fontWeight: '800', color: '#FF6B35' },
+  headerTitle: { fontSize: COMPACT_HEADER ? 20 : 24, fontWeight: '700', color: '#212529', letterSpacing: -0.5 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   locationButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#FFF0E8', borderRadius: 16,
-    paddingHorizontal: 10, paddingVertical: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#f1f3f5', borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 7,
   },
   resetButton: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: '#F44336',
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: '#212529',
     justifyContent: 'center', alignItems: 'center',
   },
-  resetButtonText: { fontSize: 16, color: '#fff', fontWeight: '800' },
-  locationIcon: { fontSize: 13 },
-  locationLabel: { fontSize: 13, fontWeight: '600', color: '#FF6B35' },
-  locationChevron: { fontSize: 11, color: '#FF6B35' },
+  resetButtonText: { fontSize: 14, color: '#fff', fontWeight: '700' },
+  locationIcon: { fontSize: 12 },
+  locationLabel: { fontSize: 13, fontWeight: '500', color: '#495057' },
+  locationChevron: { fontSize: 10, color: '#868e96' },
   locationDropdown: {
-    position: 'absolute', top: '100%', right: 0, marginTop: 6,
+    position: 'absolute', top: '100%', right: 0, marginTop: 4,
     backgroundColor: '#fff', borderRadius: 14, width: 210,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.1, shadowRadius: 24, elevation: 8,
     zIndex: 100, overflow: 'hidden',
   },
   dropdownItem: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 14, paddingVertical: 13,
+    paddingHorizontal: 16, paddingVertical: 13,
   },
-  dropdownIcon: { fontSize: 18 },
-  dropdownText: { fontSize: 14, fontWeight: '600', color: '#333' },
-  dropdownDivider: { height: 1, backgroundColor: '#f0f0f0', marginHorizontal: 10 },
+  dropdownIcon: { fontSize: 16 },
+  dropdownText: { fontSize: 15, fontWeight: '400', color: '#212529' },
+  dropdownDivider: { height: 0.5, backgroundColor: '#e9ecef', marginLeft: 42 },
   filtersRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sliderRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sliderRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
   slider: { flex: 1, height: 36 },
-  sliderLabel: { fontSize: 12, fontWeight: '700', color: '#FF6B35', minWidth: 42 },
-  sliderMax: { fontSize: 11, color: '#aaa', minWidth: 38, textAlign: 'right' },
+  sliderLabel: { fontSize: 12, fontWeight: '600', color: '#212529', minWidth: 42 },
+  sliderMax: { fontSize: 11, color: '#868e96', minWidth: 38, textAlign: 'right' },
+  noFastFoodChip: {
+    alignSelf: 'center', paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 12, backgroundColor: '#f1f3f5', marginBottom: 12,
+  },
+  noFastFoodChipActive: { backgroundColor: '#212529' },
+  noFastFoodText: { fontSize: 14, fontWeight: '600', color: '#495057' },
+  noFastFoodTextActive: { color: '#fff' },
   cuisineChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
-    borderWidth: 1.5, borderColor: '#ddd', backgroundColor: '#fff',
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+    backgroundColor: '#f1f3f5',
   },
-  cuisineChipActive: { borderColor: '#FF6B35', backgroundColor: '#FFF0E8' },
-  cuisineChipText: { fontSize: 13, fontWeight: '600', color: '#444' },
-  cuisineChevron: { fontSize: 11, color: '#888' },
+  cuisineChipActive: { backgroundColor: '#212529' },
+  cuisineChipText: { fontSize: 13, fontWeight: '500', color: '#495057' },
+  cuisineChevron: { fontSize: 10, color: '#868e96' },
   cuisineSheet: { maxHeight: '75%' },
-  cuisineGrid: { justifyContent: 'space-between', marginBottom: 12 },
+  cuisineGrid: { justifyContent: 'space-between', marginBottom: 10 },
   cuisineOption: {
-    flex: 1, marginHorizontal: 4, paddingVertical: 14,
-    borderRadius: 14, backgroundColor: '#f5f5f5',
+    flex: 1, marginHorizontal: 3, paddingVertical: 12,
+    borderRadius: 14, backgroundColor: '#f1f3f5',
     alignItems: 'center', justifyContent: 'center',
   },
-  cuisineOptionActive: { backgroundColor: '#FF6B35' },
-  cuisineOptionEmoji: { fontSize: 26, marginBottom: 4 },
-  cuisineOptionLabel: { fontSize: 11, fontWeight: '600', color: '#444', textAlign: 'center' },
+  cuisineOptionActive: { backgroundColor: '#212529' },
+  cuisineOptionEmoji: { fontSize: 24, marginBottom: 4 },
+  cuisineOptionLabel: { fontSize: 11, fontWeight: '500', color: '#495057', textAlign: 'center' },
   cuisineOptionLabelActive: { color: '#fff' },
 
   // Card area
   cardArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  centered: { alignItems: 'center', paddingHorizontal: 40 },
-  loadingText: { marginTop: 16, fontSize: 16, color: '#888' },
-  errorEmoji: { fontSize: 52, marginBottom: 12 },
-  errorText: { fontSize: 16, color: '#555', textAlign: 'center', lineHeight: 24, marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#222', textAlign: 'center', marginBottom: 6 },
-  emptySubtitle: { fontSize: 14, color: '#999', textAlign: 'center', marginBottom: 24 },
+  centered: { alignItems: 'center', paddingHorizontal: 36 },
+  loadingText: { marginTop: 16, fontSize: 15, color: '#868e96' },
+  errorEmoji: { fontSize: 48, marginBottom: 12 },
+  errorText: { fontSize: 15, color: '#495057', textAlign: 'center', lineHeight: 22, marginBottom: 20 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#212529', textAlign: 'center', marginBottom: 6 },
+  emptySubtitle: { fontSize: 14, color: '#868e96', textAlign: 'center', marginBottom: 24 },
   emptyAction: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', borderRadius: 16, padding: 16,
-    marginBottom: 10, width: '100%',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.07, shadowRadius: 6, elevation: 2,
+    backgroundColor: '#fff', borderRadius: 14, padding: 14,
+    marginBottom: 8, width: '100%',
   },
-  emptyActionIcon: { fontSize: 24 },
+  emptyActionIcon: { fontSize: 22 },
   emptyActionText: { flex: 1 },
-  emptyActionTitle: { fontSize: 15, fontWeight: '700', color: '#222', marginBottom: 2 },
-  emptyActionSub: { fontSize: 12, color: '#999' },
-  emptyActionChevron: { fontSize: 20, color: '#ccc', fontWeight: '600' },
-  retryButton: { backgroundColor: '#FF6B35', paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24 },
-  retryText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  emptyActionTitle: { fontSize: 15, fontWeight: '600', color: '#212529', marginBottom: 2 },
+  emptyActionSub: { fontSize: 12, color: '#868e96' },
+  emptyActionChevron: { fontSize: 18, color: '#dee2e6', fontWeight: '600' },
+  retryButton: { backgroundColor: '#212529', paddingHorizontal: 28, paddingVertical: 12, borderRadius: 22 },
+  retryText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 
   // Action buttons
   actionRow: {
     flexDirection: 'row', justifyContent: 'center',
-    gap: 40, paddingVertical: 20, paddingBottom: 28,
+    gap: 40, paddingVertical: 16, paddingBottom: 24,
+    backgroundColor: '#ffffff',
+    borderTopWidth: 0,
   },
   actionButton: {
-    width: 64, height: 64, borderRadius: 32,
+    width: 60, height: 60, borderRadius: 30,
     justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#fff',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
   },
-  nopeButton: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#F44336' },
-likeButton: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#4CAF50' },
-  actionButtonText: { fontSize: 26, fontWeight: '700' },
+  nopeButton: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#ff6b6b' },
+  likeButton: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#51cf66' },
+  actionButtonText: { fontSize: 24, fontWeight: '600' },
 
   // Modal (cuisine picker)
   modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)' },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.25)' },
   modalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingHorizontal: 20, paddingBottom: 40,
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    paddingHorizontal: 16, paddingBottom: 40,
     maxHeight: '80%',
   },
   modalHandle: {
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: '#ddd', alignSelf: 'center', marginTop: 12, marginBottom: 20,
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: '#dee2e6', alignSelf: 'center', marginTop: 10, marginBottom: 16,
   },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: '700', color: '#212529', marginBottom: 14, letterSpacing: -0.3 },
   // Decision prompt
   decisionOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'center', alignItems: 'center', padding: 24,
   },
   decisionSheet: {
-    backgroundColor: '#fff', borderRadius: 24,
+    backgroundColor: '#fff', borderRadius: 20,
     padding: 24, width: '100%', alignItems: 'center',
   },
-  decisionEmoji: { fontSize: 48, marginBottom: 12 },
-  decisionTitle: { fontSize: 22, fontWeight: '800', color: '#1a1a1a', textAlign: 'center', marginBottom: 8 },
-  decisionSub: { fontSize: 14, color: '#777', textAlign: 'center', lineHeight: 20, marginBottom: 20 },
+  decisionEmoji: { fontSize: 44, marginBottom: 12 },
+  decisionTitle: { fontSize: 20, fontWeight: '700', color: '#212529', textAlign: 'center', marginBottom: 8, letterSpacing: -0.3 },
+  decisionSub: { fontSize: 14, color: '#868e96', textAlign: 'center', lineHeight: 20, marginBottom: 20 },
   previewRow: { marginBottom: 20, alignSelf: 'stretch' },
-  previewItem: { alignItems: 'center', marginRight: 12, width: 72 },
-  previewImage: { width: 72, height: 72, borderRadius: 12, marginBottom: 4 },
-  previewPlaceholder: { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' },
-  previewName: { fontSize: 11, color: '#555', textAlign: 'center' },
+  previewItem: { alignItems: 'center', marginRight: 12, width: 68 },
+  previewImage: { width: 68, height: 68, borderRadius: 12, marginBottom: 4 },
+  previewPlaceholder: { backgroundColor: '#f1f3f5', justifyContent: 'center', alignItems: 'center' },
+  previewName: { fontSize: 11, color: '#868e96', textAlign: 'center' },
   decisionGoButton: {
-    backgroundColor: '#FF6B35', borderRadius: 14,
+    backgroundColor: '#212529', borderRadius: 14,
     paddingVertical: 14, paddingHorizontal: 32,
     width: '100%', alignItems: 'center', marginBottom: 10,
   },
-  decisionGoText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  decisionGoText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   decisionDismiss: { paddingVertical: 8 },
-  decisionDismissText: { color: '#aaa', fontSize: 14, fontWeight: '600' },
+  decisionDismissText: { color: '#868e96', fontSize: 14, fontWeight: '500' },
 
   // Tutorial overlay
   tutorialOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(33,37,41,0.85)',
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingBottom: 120,
     zIndex: 200,
   },
   tutorialContent: { alignItems: 'center', paddingHorizontal: 40 },
-  tutorialEmoji: { fontSize: 48, marginBottom: 12 },
-  tutorialTitle: { fontSize: 24, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 10 },
-  tutorialText: { fontSize: 16, color: 'rgba(255,255,255,0.85)', textAlign: 'center', lineHeight: 24, marginBottom: 16 },
-  tutorialArrow: { fontSize: 36, color: '#FF6B35', marginBottom: 20 },
+  tutorialEmoji: { fontSize: 44, marginBottom: 12 },
+  tutorialTitle: { fontSize: 22, fontWeight: '700', color: '#fff', textAlign: 'center', marginBottom: 10, letterSpacing: -0.3 },
+  tutorialText: { fontSize: 15, color: 'rgba(255,255,255,0.75)', textAlign: 'center', lineHeight: 22, marginBottom: 16 },
+  tutorialArrow: { fontSize: 32, color: '#fff', marginBottom: 20 },
   tutorialButton: {
-    backgroundColor: '#FF6B35', borderRadius: 24,
+    backgroundColor: '#ffffff', borderRadius: 14,
     paddingVertical: 14, paddingHorizontal: 48,
   },
-  tutorialButtonText: { color: '#fff', fontWeight: '700', fontSize: 18 },
+  tutorialButtonText: { color: '#212529', fontWeight: '600', fontSize: 17 },
 });
