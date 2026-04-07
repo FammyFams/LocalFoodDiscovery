@@ -128,9 +128,16 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
 
   const data = await response.json();
 
-  return (data.places || [])
-    .filter((place) => !isGlobalChain(place.displayName?.text ?? ''))
-    .map((place) => ({
+  const filtered = (data.places || [])
+    .filter((place) => !isGlobalChain(place.displayName?.text ?? ''));
+
+  // Shuffle so the order feels random each time
+  for (let i = filtered.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+  }
+
+  return filtered.map((place) => ({
     id: place.id,
     name: place.displayName?.text ?? 'Unknown',
     distance: null,

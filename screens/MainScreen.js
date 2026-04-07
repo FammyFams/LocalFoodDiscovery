@@ -9,10 +9,9 @@ import {
   Animated,
   Modal,
   FlatList,
-  KeyboardAvoidingView,
-  Platform,
   Image,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -22,6 +21,10 @@ import Slider from '@react-native-community/slider';
 import { useFocusEffect } from '@react-navigation/native';
 import { consumePendingLocation } from '../services/locationBridge';
 import { useRestaurants } from '../context/RestaurantContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const COMPACT_HEADER = SCREEN_WIDTH < 400;
 
 const RADIUS_MIN = 0.5;
 const RADIUS_MAX = 5;
@@ -64,6 +67,7 @@ export default function MainScreen({ navigation }) {
   const [cuisineType, setCuisineType] = useState(null);
   const [cuisineModalVisible, setCuisineModalVisible] = useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const { likeRestaurant, dislikeRestaurant, likedRestaurants, notNowRestaurants, clearAll } = useRestaurants();
 
@@ -93,6 +97,9 @@ export default function MainScreen({ navigation }) {
 
   useEffect(() => {
     requestCurrentLocation();
+    AsyncStorage.getItem('tutorialSeen').then((val) => {
+      if (!val) setShowTutorial(true);
+    });
   }, []);
 
   // Pick up location (and optional radius) set by MapPickerScreen when this screen regains focus
@@ -207,13 +214,31 @@ function removeTopCard(id) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>foodFinder 🍽️</Text>
+          <Text style={styles.headerTitle}>{COMPACT_HEADER ? '🍽️ Food' : 'foodFinder 🍽️'}</Text>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.locationButton} onPress={() => setLocationModalVisible(true)}>
-              <Text style={styles.locationIcon}>📍</Text>
-              <Text style={styles.locationLabel} numberOfLines={1}>{locationLabel}</Text>
-              <Text style={styles.locationChevron}>▾</Text>
-            </TouchableOpacity>
+            <View>
+              <TouchableOpacity style={styles.locationButton} onPress={() => setLocationModalVisible(!locationModalVisible)}>
+                <Text style={styles.locationIcon}>📍</Text>
+                <Text style={styles.locationLabel} numberOfLines={1}>{locationLabel}</Text>
+                <Text style={styles.locationChevron}>▾</Text>
+              </TouchableOpacity>
+              {locationModalVisible && (
+                <View style={styles.locationDropdown}>
+                  <TouchableOpacity style={styles.dropdownItem} onPress={useCurrentLocation}>
+                    <Text style={styles.dropdownIcon}>📍</Text>
+                    <Text style={styles.dropdownText}>Use Current Location</Text>
+                  </TouchableOpacity>
+                  <View style={styles.dropdownDivider} />
+                  <TouchableOpacity style={styles.dropdownItem} onPress={() => {
+                    setLocationModalVisible(false);
+                    navigation.navigate('MapPicker', { initialCoords: location, initialRadius: radius });
+                  }}>
+                    <Text style={styles.dropdownIcon}>🗺️</Text>
+                    <Text style={styles.dropdownText}>Pick on Map</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
             <TouchableOpacity style={styles.resetButton} onPress={handleReset}>
               <Text style={styles.resetButtonText}>↺</Text>
             </TouchableOpacity>
@@ -389,37 +414,14 @@ function removeTopCard(id) {
         </View>
       </Modal>
 
-      {/* Location picker modal */}
-      <Modal
-        visible={locationModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setLocationModalVisible(false)}
-      >
-        <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setLocationModalVisible(false)} />
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Choose Location</Text>
-
-            <TouchableOpacity style={styles.currentLocButton} onPress={useCurrentLocation}>
-              <Text style={styles.currentLocIcon}>📍</Text>
-              <Text style={styles.currentLocText}>Use Current Location</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.mapButton}
-              onPress={() => {
-                setLocationModalVisible(false);
-                navigation.navigate('MapPicker', { initialCoords: location, initialRadius: radius });
-              }}
-            >
-              <Text style={styles.currentLocIcon}>🗺️</Text>
-              <Text style={styles.mapButtonText}>Pick on Map</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      {/* Backdrop to close location dropdown */}
+      {locationModalVisible && (
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={() => setLocationModalVisible(false)}
+        />
+      )}
 
       {/* Cuisine picker modal */}
       <Modal
@@ -458,6 +460,30 @@ function removeTopCard(id) {
         </View>
       </Modal>
 
+      {/* First-time tutorial overlay */}
+      {showTutorial && (
+        <View style={styles.tutorialOverlay}>
+          <View style={styles.tutorialContent}>
+            <Text style={styles.tutorialEmoji}>🤔</Text>
+            <Text style={styles.tutorialTitle}>Don't know where to eat?</Text>
+            <Text style={styles.tutorialText}>
+              Swipe right to save a restaurant you'd like to try.{'\n'}
+              Swipe left to skip it.
+            </Text>
+            <Text style={styles.tutorialArrow}>↓</Text>
+            <TouchableOpacity
+              style={styles.tutorialButton}
+              onPress={() => {
+                setShowTutorial(false);
+                AsyncStorage.setItem('tutorialSeen', 'true');
+              }}
+            >
+              <Text style={styles.tutorialButtonText}>Got it!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
     </SafeAreaView>
   );
 }
@@ -469,17 +495,18 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 12, paddingHorizontal: 20, paddingBottom: 12,
     backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+    zIndex: 100,
   },
   headerTop: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', marginBottom: 10,
   },
-  headerTitle: { fontSize: 26, fontWeight: '800', color: '#FF6B35' },
+  headerTitle: { fontSize: COMPACT_HEADER ? 20 : 26, fontWeight: '800', color: '#FF6B35' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   locationButton: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: '#FFF0E8', borderRadius: 16,
-    paddingHorizontal: 10, paddingVertical: 5, maxWidth: 140,
+    paddingHorizontal: 10, paddingVertical: 5,
   },
   resetButton: {
     width: 32, height: 32, borderRadius: 16,
@@ -488,8 +515,22 @@ const styles = StyleSheet.create({
   },
   resetButtonText: { fontSize: 16, color: '#fff', fontWeight: '800' },
   locationIcon: { fontSize: 13 },
-  locationLabel: { fontSize: 13, fontWeight: '600', color: '#FF6B35', flex: 1 },
+  locationLabel: { fontSize: 13, fontWeight: '600', color: '#FF6B35' },
   locationChevron: { fontSize: 11, color: '#FF6B35' },
+  locationDropdown: {
+    position: 'absolute', top: '100%', right: 0, marginTop: 6,
+    backgroundColor: '#fff', borderRadius: 14, width: 210,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
+    zIndex: 100, overflow: 'hidden',
+  },
+  dropdownItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 14, paddingVertical: 13,
+  },
+  dropdownIcon: { fontSize: 18 },
+  dropdownText: { fontSize: 14, fontWeight: '600', color: '#333' },
+  dropdownDivider: { height: 1, backgroundColor: '#f0f0f0', marginHorizontal: 10 },
   filtersRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   sliderRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6 },
   slider: { flex: 1, height: 36 },
@@ -567,19 +608,6 @@ likeButton: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#4CAF50' },
     backgroundColor: '#ddd', alignSelf: 'center', marginTop: 12, marginBottom: 20,
   },
   modalTitle: { fontSize: 20, fontWeight: '800', color: '#1a1a1a', marginBottom: 16 },
-  currentLocButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#FFF0E8', borderRadius: 14,
-    paddingHorizontal: 16, paddingVertical: 14, marginBottom: 16,
-  },
-  currentLocIcon: { fontSize: 20 },
-  currentLocText: { fontSize: 16, fontWeight: '600', color: '#FF6B35' },
-  mapButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#F0F4FF', borderRadius: 14,
-    paddingHorizontal: 16, paddingVertical: 14,
-  },
-  mapButtonText: { fontSize: 16, fontWeight: '600', color: '#3B5BDB' },
   // Decision prompt
   decisionOverlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
@@ -605,4 +633,24 @@ likeButton: { backgroundColor: '#fff', borderWidth: 2, borderColor: '#4CAF50' },
   decisionGoText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   decisionDismiss: { paddingVertical: 8 },
   decisionDismissText: { color: '#aaa', fontSize: 14, fontWeight: '600' },
+
+  // Tutorial overlay
+  tutorialOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingBottom: 120,
+    zIndex: 200,
+  },
+  tutorialContent: { alignItems: 'center', paddingHorizontal: 40 },
+  tutorialEmoji: { fontSize: 48, marginBottom: 12 },
+  tutorialTitle: { fontSize: 24, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 10 },
+  tutorialText: { fontSize: 16, color: 'rgba(255,255,255,0.85)', textAlign: 'center', lineHeight: 24, marginBottom: 16 },
+  tutorialArrow: { fontSize: 36, color: '#FF6B35', marginBottom: 20 },
+  tutorialButton: {
+    backgroundColor: '#FF6B35', borderRadius: 24,
+    paddingVertical: 14, paddingHorizontal: 48,
+  },
+  tutorialButtonText: { color: '#fff', fontWeight: '700', fontSize: 18 },
 });

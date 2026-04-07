@@ -165,7 +165,7 @@ export default function DetailScreen({ route, navigation }) {
         <View style={styles.mapLinksRow}>
           <TouchableOpacity
             style={styles.mapLink}
-            onPress={() => Linking.openURL(`https://www.google.com/maps/place/?q=place_id:${restaurant.id}`)}
+            onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name + ', ' + restaurant.address)}`)}
           >
             <Text style={styles.mapLinkText}>🗺️ Google Maps</Text>
           </TouchableOpacity>
@@ -173,8 +173,8 @@ export default function DetailScreen({ route, navigation }) {
             style={styles.mapLink}
             onPress={() => Linking.openURL(
               Platform.OS === 'ios'
-                ? `maps://?q=${encodeURIComponent(restaurant.name)}&address=${encodeURIComponent(restaurant.address)}`
-                : `https://maps.apple.com/?q=${encodeURIComponent(restaurant.name)}`
+                ? `maps://?q=${encodeURIComponent(restaurant.name + ', ' + restaurant.address)}`
+                : `https://maps.apple.com/?q=${encodeURIComponent(restaurant.name + ', ' + restaurant.address)}`
             )}
           >
             <Text style={styles.mapLinkText}>🍎 Apple Maps</Text>

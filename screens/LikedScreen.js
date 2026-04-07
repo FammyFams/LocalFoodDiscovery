@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+  Linking,
 } from 'react-native';
 import { useRestaurants } from '../context/RestaurantContext';
 
@@ -26,7 +27,18 @@ export default function LikedScreen({ navigation }) {
     );
   }
 
+  // TODO: Remove this button or keep it — experimental export feature
+  function exportToGoogleMaps() {
+    const query = likedRestaurants.map((r) => r.name + ', ' + r.address).join(' | ');
+    Linking.openURL(`https://www.google.com/maps/search/${encodeURIComponent(query)}`);
+  }
+
   return (
+    <View style={{ flex: 1 }}>
+      {/* TODO: Remove — experimental export button */}
+      <TouchableOpacity style={styles.exportButton} onPress={exportToGoogleMaps}>
+        <Text style={styles.exportButtonText}>🗺️ View All on Google Maps</Text>
+      </TouchableOpacity>
     <FlatList
       data={likedRestaurants}
       keyExtractor={(item) => item.id}
@@ -61,6 +73,7 @@ export default function LikedScreen({ navigation }) {
         </TouchableOpacity>
       )}
     />
+    </View>
   );
 }
 
@@ -90,4 +103,10 @@ const styles = StyleSheet.create({
   chevron: { fontSize: 22, color: '#ccc', fontWeight: '600' },
   removeButton: { padding: 4 },
   removeText: { fontSize: 14, color: '#ddd', fontWeight: '600' },
+  // TODO: Remove — experimental export button styles
+  exportButton: {
+    backgroundColor: '#3B5BDB', borderRadius: 14, marginHorizontal: 16,
+    marginTop: 12, marginBottom: 4, paddingVertical: 12, alignItems: 'center',
+  },
+  exportButtonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });

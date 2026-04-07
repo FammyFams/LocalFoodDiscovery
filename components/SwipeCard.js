@@ -11,6 +11,17 @@ import {
 } from 'react-native';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+function getNextOpenTime(hours) {
+  if (!hours || hours.length === 0) return null;
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const today = days[new Date().getDay()];
+  const todayEntry = hours.find((h) => h.startsWith(today));
+  if (!todayEntry) return null;
+  // e.g. "Monday: 11:00 AM – 9:00 PM" or "Monday: Closed"
+  const match = todayEntry.match(/:\s*(\d{1,2}:\d{2}\s*[AP]M)/i);
+  return match ? match[1].trim() : null;
+}
 const CARD_WIDTH = Math.min(SCREEN_WIDTH - 32, 420);
 const CARD_HEIGHT = Math.min(SCREEN_HEIGHT * 0.62, 520);
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.22;
@@ -145,7 +156,7 @@ const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwi
               )}
               {restaurant.openNow !== null && (
                 <Text style={[styles.metaText, { color: restaurant.openNow ? '#81C784' : '#EF9A9A' }]}>
-                  {'  '}{restaurant.openNow ? '● Open' : '● Closed'}
+                  {'  '}{restaurant.openNow ? '● Open' : `● Closed${getNextOpenTime(restaurant.hours) ? ` (Opens ${getNextOpenTime(restaurant.hours)})` : ''}`}
                 </Text>
               )}
             </View>
