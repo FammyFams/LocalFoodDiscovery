@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,9 @@ import {
   Animated,
   Linking,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRestaurants } from '../context/RestaurantContext';
+import { useTheme } from '../context/ThemeContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = Math.min(SCREEN_WIDTH * 0.75, 360);
@@ -20,6 +22,9 @@ export default function DetailScreen({ route, navigation }) {
   const { restaurant } = route.params;
   const { likedRestaurants, notNowRestaurants, likeRestaurant, dislikeRestaurant, removeLiked, removeNotNow } =
     useRestaurants();
+  const t = useTheme();
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(t), [t]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showAllHours, setShowAllHours] = useState(false);
 
@@ -49,10 +54,12 @@ export default function DetailScreen({ route, navigation }) {
 
   function handleNotNow() {
     pulseButton(notNowAnim, () => {
-      if (isNotNow) removeNotNow(restaurant.id);
-      else {
+      if (isNotNow) {
+        removeNotNow(restaurant.id);
+      } else {
         dislikeRestaurant(restaurant);
         if (isLiked) removeLiked(restaurant.id);
+        navigation.goBack();
       }
     });
   }
@@ -98,7 +105,7 @@ export default function DetailScreen({ route, navigation }) {
       </View>
 
       {/* Info */}
-      <View style={styles.info}>
+      <View style={[styles.info, { paddingBottom: insets.bottom + 20 }]}>
         {/* Name + open status */}
         <View style={styles.nameRow}>
           <Text style={styles.name}>{restaurant.name}</Text>
@@ -225,7 +232,7 @@ export default function DetailScreen({ route, navigation }) {
               activeOpacity={0.8}
             >
               <Text style={[styles.actionButtonText, isNotNow && styles.activeActionText]}>
-                {isNotNow ? '✕  Remove' : '✕  Not Now'}
+                {isNotNow ? '✕  Not Now' : '✕  Not Now'}
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -249,67 +256,69 @@ export default function DetailScreen({ route, navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f6f7' },
-  imageContainer: { position: 'relative', height: IMAGE_HEIGHT, backgroundColor: '#e9ecef' },
-  image: { width: SCREEN_WIDTH, height: IMAGE_HEIGHT },
-  imagePlaceholder: { backgroundColor: '#f5f6f7', justifyContent: 'center', alignItems: 'center' },
-  dots: {
-    position: 'absolute', bottom: 12, left: 0, right: 0,
-    flexDirection: 'row', justifyContent: 'center', gap: 5,
-  },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.4)' },
-  dotActive: { backgroundColor: '#fff', width: 16, borderRadius: 3 },
-  backButton: {
-    position: 'absolute', top: Platform.OS === 'ios' ? 54 : 20, left: 16,
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center',
-  },
-  backButtonText: { color: '#fff', fontSize: 26, fontWeight: '600', marginTop: -2 },
-  info: { padding: 20, paddingBottom: 40 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' },
-  name: { fontSize: 24, fontWeight: '700', color: '#212529', flex: 1, letterSpacing: -0.3 },
-  openBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  openBadgeOpen: { backgroundColor: '#D1FAE5' },
-  openBadgeClosed: { backgroundColor: '#FEE2E2' },
-  openBadgeText: { fontSize: 12, fontWeight: '600', color: '#212529' },
-  typesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
-  typeChip: { backgroundColor: '#f5f6f7', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  typeChipText: { fontSize: 12, fontWeight: '500', color: '#868e96' },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
-  badge: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 5,
-  },
-  badgeText: { fontSize: 14, fontWeight: '600', color: '#495057' },
-  badgeSubText: { fontSize: 13, color: '#868e96' },
-  section: { marginBottom: 14 },
-  description: { fontSize: 15, color: '#495057', lineHeight: 22 },
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16 },
-  tag: { backgroundColor: '#f5f6f7', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  tagText: { fontSize: 12, fontWeight: '500', color: '#868e96' },
-  divider: { height: 0.5, backgroundColor: '#e9ecef', marginVertical: 16 },
-  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
-  infoIcon: { fontSize: 15, marginTop: 1 },
-  infoText: { fontSize: 15, color: '#495057', flex: 1, lineHeight: 20 },
-  link: { color: '#007AFF' },
-  mapLinksRow: { flexDirection: 'row', gap: 8, marginBottom: 12, marginLeft: 26 },
-  mapLink: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#f5f6f7', borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 7,
-  },
-  mapLinkText: { fontSize: 13, fontWeight: '500', color: '#007AFF' },
-  chevron: { fontSize: 11, color: '#dee2e6', marginLeft: 4, marginTop: 3 },
-  hoursSection: { marginBottom: 4 },
-  hourLine: { fontSize: 13, color: '#868e96', marginLeft: 28, marginBottom: 3, lineHeight: 19 },
-  actionRow: { flexDirection: 'row', marginTop: 4 },
-  actionButton: { paddingVertical: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1.5 },
-  inactiveLike: { borderColor: '#51cf66', backgroundColor: '#fff' },
-  activeLike: { borderColor: '#51cf66', backgroundColor: '#51cf66' },
-  inactiveNotNow: { borderColor: '#ff6b6b', backgroundColor: '#fff' },
-  activeNotNow: { borderColor: '#ff6b6b', backgroundColor: '#ff6b6b' },
-  actionButtonText: { fontSize: 16, fontWeight: '600', color: '#495057' },
-  activeActionText: { color: '#fff' },
-});
+function createStyles(t) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
+    imageContainer: { position: 'relative', height: IMAGE_HEIGHT, backgroundColor: t.separator },
+    image: { width: SCREEN_WIDTH, height: IMAGE_HEIGHT },
+    imagePlaceholder: { backgroundColor: t.bg, justifyContent: 'center', alignItems: 'center' },
+    dots: {
+      position: 'absolute', bottom: 12, left: 0, right: 0,
+      flexDirection: 'row', justifyContent: 'center', gap: 5,
+    },
+    dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.4)' },
+    dotActive: { backgroundColor: '#fff', width: 16, borderRadius: 3 },
+    backButton: {
+      position: 'absolute', top: Platform.OS === 'ios' ? 60 : 36, left: 16,
+      width: 44, height: 44, borderRadius: 22,
+      backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center',
+    },
+    backButtonText: { color: '#fff', fontSize: 30, fontWeight: '600', marginTop: -2 },
+    info: { padding: 20 },
+    nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' },
+    name: { fontSize: 24, fontWeight: '700', color: t.text, flex: 1, letterSpacing: -0.3 },
+    openBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+    openBadgeOpen: { backgroundColor: '#D1FAE5' },
+    openBadgeClosed: { backgroundColor: '#FEE2E2' },
+    openBadgeText: { fontSize: 12, fontWeight: '600', color: t.text },
+    typesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
+    typeChip: { backgroundColor: t.inputBg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+    typeChipText: { fontSize: 12, fontWeight: '500', color: t.textTertiary },
+    metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
+    badge: {
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: t.card, borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 5,
+    },
+    badgeText: { fontSize: 14, fontWeight: '600', color: t.textSecondary },
+    badgeSubText: { fontSize: 13, color: t.textTertiary },
+    section: { marginBottom: 14 },
+    description: { fontSize: 15, color: t.textSecondary, lineHeight: 22 },
+    tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 16 },
+    tag: { backgroundColor: t.inputBg, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+    tagText: { fontSize: 12, fontWeight: '500', color: t.textTertiary },
+    divider: { height: 0.5, backgroundColor: t.separator, marginVertical: 16 },
+    infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
+    infoIcon: { fontSize: 15, marginTop: 1 },
+    infoText: { fontSize: 15, color: t.textSecondary, flex: 1, lineHeight: 20 },
+    link: { color: t.blue },
+    mapLinksRow: { flexDirection: 'row', gap: 8, marginBottom: 12, marginLeft: 26 },
+    mapLink: {
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: t.inputBg, borderRadius: 8,
+      paddingHorizontal: 12, paddingVertical: 7,
+    },
+    mapLinkText: { fontSize: 13, fontWeight: '500', color: t.blue },
+    chevron: { fontSize: 11, color: t.border, marginLeft: 4, marginTop: 3 },
+    hoursSection: { marginBottom: 4 },
+    hourLine: { fontSize: 13, color: t.textTertiary, marginLeft: 28, marginBottom: 3, lineHeight: 19 },
+    actionRow: { flexDirection: 'row', marginTop: 4 },
+    actionButton: { paddingVertical: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1.5 },
+    inactiveLike: { borderColor: t.green, backgroundColor: t.card },
+    activeLike: { borderColor: t.green, backgroundColor: t.green },
+    inactiveNotNow: { borderColor: t.red, backgroundColor: t.card },
+    activeNotNow: { borderColor: t.red, backgroundColor: t.red },
+    actionButtonText: { fontSize: 16, fontWeight: '600', color: t.textSecondary },
+    activeActionText: { color: '#fff' },
+  });
+}

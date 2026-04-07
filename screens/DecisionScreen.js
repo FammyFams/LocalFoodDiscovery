@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import { useTheme } from '../context/ThemeContext';
 export default function DecisionScreen({ navigation }) {
   const { likedRestaurants, removeLiked, dislikeRestaurant } = useRestaurants();
   const t = useTheme();
+  const styles = useMemo(() => createStyles(t), [t]);
 
   // Snapshot the liked list when this screen opens so the deck is stable
   const [deck, setDeck] = useState(() => [...likedRestaurants]);
@@ -76,7 +77,7 @@ export default function DecisionScreen({ navigation }) {
           )}
 
           <TouchableOpacity
-            style={[styles.viewButton, kept.length !== 1 && { backgroundColor: '#212529' }]}
+            style={[styles.viewButton, kept.length !== 1 && { backgroundColor: t.accent }]}
             onPress={() => navigation.goBack()}
           >
             <Text style={styles.viewButtonText}>
@@ -162,61 +163,63 @@ export default function DecisionScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f6f7' },
+function createStyles(t) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
 
-  header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 12,
-    backgroundColor: '#ffffff', borderBottomWidth: 0.5, borderBottomColor: '#e9ecef',
-  },
-  backButton: { padding: 4 },
-  backText: { fontSize: 30, fontWeight: '600', color: '#212529', lineHeight: 34 },
-  headerCenter: { flex: 1, alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '600', color: '#212529' },
-  headerSub: { fontSize: 12, color: '#868e96', marginTop: 2 },
+    header: {
+      flexDirection: 'row', alignItems: 'center',
+      paddingHorizontal: 16, paddingVertical: 12,
+      backgroundColor: t.surface, borderBottomWidth: 0.5, borderBottomColor: t.separator,
+    },
+    backButton: { padding: 4 },
+    backText: { fontSize: 30, fontWeight: '600', color: t.text, lineHeight: 34 },
+    headerCenter: { flex: 1, alignItems: 'center' },
+    headerTitle: { fontSize: 17, fontWeight: '600', color: t.text },
+    headerSub: { fontSize: 12, color: t.textTertiary, marginTop: 2 },
 
-  progressBar: {
-    height: 2, backgroundColor: '#e9ecef',
-  },
-  progressFill: {
-    height: 2, backgroundColor: '#212529', borderRadius: 1,
-  },
+    progressBar: {
+      height: 2, backgroundColor: t.separator,
+    },
+    progressFill: {
+      height: 2, backgroundColor: t.accent, borderRadius: 1,
+    },
 
-  cardArea: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-  },
+    cardArea: {
+      flex: 1, alignItems: 'center', justifyContent: 'center',
+    },
 
-  actionRow: {
-    flexDirection: 'row', justifyContent: 'center',
-    alignItems: 'center', gap: 16,
-    paddingVertical: 16, paddingBottom: 24,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 0.5, borderTopColor: '#e9ecef',
-  },
-  actionHint: { width: 48, alignItems: 'center' },
-  hintText: { fontSize: 11, color: '#adb5bd', fontWeight: '500' },
-  actionButton: {
-    width: 60, height: 60, borderRadius: 30,
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
-  },
-  nopeButton: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#ff6b6b' },
-  likeButton: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#51cf66' },
-  actionButtonText: { fontSize: 24, fontWeight: '600' },
+    actionRow: {
+      flexDirection: 'row', justifyContent: 'center',
+      alignItems: 'center', gap: 16,
+      paddingVertical: 16, paddingBottom: 24,
+      backgroundColor: t.surface,
+      borderTopWidth: 0.5, borderTopColor: t.separator,
+    },
+    actionHint: { width: 48, alignItems: 'center' },
+    hintText: { fontSize: 11, color: t.textQuaternary, fontWeight: '500' },
+    actionButton: {
+      width: 60, height: 60, borderRadius: 30,
+      justifyContent: 'center', alignItems: 'center',
+      shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+    },
+    nopeButton: { backgroundColor: t.card, borderWidth: 1.5, borderColor: t.red },
+    likeButton: { backgroundColor: t.card, borderWidth: 1.5, borderColor: t.green },
+    actionButtonText: { fontSize: 24, fontWeight: '600' },
 
-  // Done screen
-  doneContainer: {
-    flex: 1, justifyContent: 'center', alignItems: 'center', padding: 36,
-  },
-  doneEmoji: { fontSize: 56, marginBottom: 16 },
-  doneTitle: { fontSize: 22, fontWeight: '700', color: '#212529', textAlign: 'center', marginBottom: 10, letterSpacing: -0.3 },
-  doneSub: { fontSize: 15, color: '#868e96', textAlign: 'center', lineHeight: 22, marginBottom: 28 },
-  viewButton: {
-    backgroundColor: '#212529', borderRadius: 12,
-    paddingVertical: 14, paddingHorizontal: 32,
-    width: '100%', alignItems: 'center', marginBottom: 10,
-  },
-  viewButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-});
+    // Done screen
+    doneContainer: {
+      flex: 1, justifyContent: 'center', alignItems: 'center', padding: 36,
+    },
+    doneEmoji: { fontSize: 56, marginBottom: 16 },
+    doneTitle: { fontSize: 22, fontWeight: '700', color: t.text, textAlign: 'center', marginBottom: 10, letterSpacing: -0.3 },
+    doneSub: { fontSize: 15, color: t.textTertiary, textAlign: 'center', lineHeight: 22, marginBottom: 28 },
+    viewButton: {
+      backgroundColor: t.accent, borderRadius: 12,
+      paddingVertical: 14, paddingHorizontal: 32,
+      width: '100%', alignItems: 'center', marginBottom: 10,
+    },
+    viewButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+  });
+}

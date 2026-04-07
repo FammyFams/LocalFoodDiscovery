@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { useSettings } from '../context/SettingsContext';
+import { useTheme } from '../context/ThemeContext';
 
 const DIET_OPTIONS = [
   { key: 'vegetarian', label: 'Vegetarian', emoji: '🥗' },
@@ -12,6 +13,8 @@ const DIET_OPTIONS = [
 
 export default function DietPreferencesScreen() {
   const { settings, updateSettings } = useSettings();
+  const t = useTheme();
+  const styles = useMemo(() => createStyles(t), [t]);
   const enabled = settings.dietRestrictionsEnabled || false;
   const current = settings.dietPreferences || [];
 
@@ -36,7 +39,7 @@ export default function DietPreferencesScreen() {
           <Switch
             value={enabled}
             onValueChange={toggleEnabled}
-            trackColor={{ false: '#e9ecef', true: '#212529' }}
+            trackColor={{ false: t.separator, true: t.accent }}
             thumbColor="#fff"
           />
         </View>
@@ -66,16 +69,18 @@ export default function DietPreferencesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f6f7', paddingHorizontal: 16, paddingTop: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', marginBottom: 16 },
-  row: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 13, minHeight: 44,
-  },
-  rowEmoji: { fontSize: 18, marginRight: 12 },
-  rowLabel: { flex: 1, fontSize: 16, color: '#212529' },
-  checkmark: { fontSize: 17, color: '#212529', fontWeight: '600', width: 24, textAlign: 'right' },
-  separator: { height: 0.5, backgroundColor: '#e9ecef', marginLeft: 16 },
-  hint: { fontSize: 13, color: '#868e96', paddingHorizontal: 4, lineHeight: 18 },
-});
+function createStyles(t) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg, paddingHorizontal: 16, paddingTop: 16 },
+    card: { backgroundColor: t.card, borderRadius: 12, overflow: 'hidden', marginBottom: 16 },
+    row: {
+      flexDirection: 'row', alignItems: 'center',
+      paddingHorizontal: 16, paddingVertical: 13, minHeight: 44,
+    },
+    rowEmoji: { fontSize: 18, marginRight: 12 },
+    rowLabel: { flex: 1, fontSize: 16, color: t.text },
+    checkmark: { fontSize: 17, color: t.accent, fontWeight: '600', width: 24, textAlign: 'right' },
+    separator: { height: 0.5, backgroundColor: t.separator, marginLeft: 16 },
+    hint: { fontSize: 13, color: t.textTertiary, paddingHorizontal: 4, lineHeight: 18 },
+  });
+}

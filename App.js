@@ -1,10 +1,11 @@
 import 'react-native-gesture-handler';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, Platform } from 'react-native';
+import { Text, Platform, AppState } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { initAnalytics, trackEvent } from './services/analytics';
 
 import { RestaurantProvider } from './context/RestaurantContext';
 import { SettingsProvider, useSettings } from './context/SettingsContext';
@@ -34,8 +35,9 @@ function TabNavigator() {
           backgroundColor: t.tabBar,
           borderTopColor: t.separator,
           borderTopWidth: 0.5,
-          paddingTop: 4,
-          height: Platform.OS === 'ios' ? 84 : 60,
+          paddingTop: 6,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+          height: Platform.OS === 'ios' ? 92 : 68,
         },
         tabBarActiveTintColor: t.accent,
         tabBarInactiveTintColor: t.textTertiary,
@@ -97,6 +99,16 @@ function AppContent() {
   const { settings } = useSettings();
   const t = useTheme();
   const isDark = settings.darkMode;
+
+  useEffect(() => {
+    initAnalytics().then(() => trackEvent('app_opened'));
+
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') trackEvent('app_foregrounded');
+      if (state === 'background') trackEvent('app_backgrounded');
+    });
+    return () => sub.remove();
+  }, []);
 
   const navTheme = isDark
     ? { ...DarkTheme, colors: { ...DarkTheme.colors, background: t.bg, card: t.surface, text: t.text, border: t.separator, primary: t.accent } }

@@ -1,4 +1,4 @@
-import React, { useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Dimensions,
   TouchableOpacity,
 } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -22,12 +23,15 @@ function getNextOpenTime(hours) {
   const match = todayEntry.match(/:\s*(\d{1,2}:\d{2}\s*[AP]M)/i);
   return match ? match[1].trim() : null;
 }
-const CARD_WIDTH = Math.min(SCREEN_WIDTH - 32, 420);
-const CARD_HEIGHT = Math.min(SCREEN_HEIGHT * 0.62, 520);
+const CARD_WIDTH = Math.min(SCREEN_WIDTH - 24, 420);
+// Subtract header (~100), action buttons (~70), tab bar (~90) from screen height
+const CARD_HEIGHT = SCREEN_HEIGHT - 310;
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.22;
 const SWIPE_OUT_DURATION = 300;
 
 const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwipeRight, onPress, isTop, index }, ref) {
+  const t = useTheme();
+  const styles = useMemo(() => createStyles(t), [t]);
   const position = useRef(new Animated.ValueXY()).current;
   const cardScale = useRef(new Animated.Value(1)).current;
   const isTopRef = useRef(isTop);
@@ -126,8 +130,8 @@ const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwi
       <View style={styles.card}>
         <TouchableOpacity activeOpacity={0.95} onPress={() => isTop && onPress(restaurant)} style={styles.touchable}>
 
-          <Animated.View style={[styles.tint, { backgroundColor: '#51cf66', opacity: likeTintOpacity }]} />
-          <Animated.View style={[styles.tint, { backgroundColor: '#ff6b6b', opacity: nopeTintOpacity }]} />
+          <Animated.View style={[styles.tint, { backgroundColor: t.green, opacity: likeTintOpacity }]} />
+          <Animated.View style={[styles.tint, { backgroundColor: t.red, opacity: nopeTintOpacity }]} />
 
           <Animated.View style={[styles.stamp, styles.likeStamp, { opacity: likeProgress }]}>
             <Text style={styles.likeStampText}>LIKE</Text>
@@ -177,90 +181,92 @@ export default SwipeCard;
 const BORDER_RADIUS = 18;
 const GLOW_SPREAD = 3;
 
-const styles = StyleSheet.create({
-  wrapper: {
-    position: 'absolute',
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
-    alignSelf: 'center',
-  },
-  glowBorder: {
-    position: 'absolute',
-    top: -GLOW_SPREAD,
-    left: -GLOW_SPREAD,
-    right: -GLOW_SPREAD,
-    bottom: -GLOW_SPREAD,
-    borderRadius: BORDER_RADIUS + GLOW_SPREAD,
-    borderWidth: GLOW_SPREAD,
-  },
-  likeGlow: {
-    borderColor: '#51cf66',
-    shadowColor: '#51cf66',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 16,
-    elevation: 16,
-  },
-  nopeGlow: {
-    borderColor: '#ff6b6b',
-    shadowColor: '#ff6b6b',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 16,
-    elevation: 16,
-  },
-  card: {
-    flex: 1,
-    borderRadius: BORDER_RADIUS,
-    backgroundColor: '#fff',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 4,
-  },
-  touchable: { flex: 1 },
-  image: { position: 'absolute', width: '100%', height: '100%' },
-  imagePlaceholder: {
-    width: '100%', height: '100%',
-    backgroundColor: '#E8E8ED', justifyContent: 'center', alignItems: 'center',
-  },
-  tint: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    zIndex: 2,
-  },
-  stamp: {
-    position: 'absolute', top: 44, zIndex: 10,
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderWidth: 3, borderRadius: 6,
-  },
-  likeStamp: {
-    left: 20,
-    borderColor: '#51cf66',
-    transform: [{ rotate: '-22deg' }],
-  },
-  nopeStamp: {
-    right: 20,
-    borderColor: '#ff6b6b',
-    transform: [{ rotate: '22deg' }],
-  },
-  likeStampText: {
-    fontSize: 22, fontWeight: '800', color: '#51cf66', letterSpacing: 2,
-  },
-  nopeStampText: {
-    fontSize: 22, fontWeight: '800', color: '#ff6b6b', letterSpacing: 2,
-  },
-  infoOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 18, paddingTop: 14, paddingBottom: 18,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 18, borderTopRightRadius: 18,
-    zIndex: 3,
-  },
-  name: { fontSize: 20, fontWeight: '700', color: '#212529', marginBottom: 4, letterSpacing: -0.3 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },
-  metaText: { fontSize: 13, color: '#495057', fontWeight: '500' },
-  cuisine: { fontSize: 12, color: '#868e96', marginBottom: 2 },
-  address: { fontSize: 12, color: '#adb5bd' },
-});
+function createStyles(t) {
+  return StyleSheet.create({
+    wrapper: {
+      position: 'absolute',
+      width: CARD_WIDTH,
+      height: CARD_HEIGHT,
+      alignSelf: 'center',
+    },
+    glowBorder: {
+      position: 'absolute',
+      top: -GLOW_SPREAD,
+      left: -GLOW_SPREAD,
+      right: -GLOW_SPREAD,
+      bottom: -GLOW_SPREAD,
+      borderRadius: BORDER_RADIUS + GLOW_SPREAD,
+      borderWidth: GLOW_SPREAD,
+    },
+    likeGlow: {
+      borderColor: t.green,
+      shadowColor: t.green,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.8,
+      shadowRadius: 16,
+      elevation: 16,
+    },
+    nopeGlow: {
+      borderColor: t.red,
+      shadowColor: t.red,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.8,
+      shadowRadius: 16,
+      elevation: 16,
+    },
+    card: {
+      flex: 1,
+      borderRadius: BORDER_RADIUS,
+      backgroundColor: t.card,
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
+      elevation: 4,
+    },
+    touchable: { flex: 1 },
+    image: { position: 'absolute', width: '100%', height: '100%' },
+    imagePlaceholder: {
+      width: '100%', height: '100%',
+      backgroundColor: t.inputBg, justifyContent: 'center', alignItems: 'center',
+    },
+    tint: {
+      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+      zIndex: 2,
+    },
+    stamp: {
+      position: 'absolute', top: 44, zIndex: 10,
+      paddingHorizontal: 12, paddingVertical: 6,
+      borderWidth: 3, borderRadius: 6,
+    },
+    likeStamp: {
+      left: 20,
+      borderColor: t.green,
+      transform: [{ rotate: '-22deg' }],
+    },
+    nopeStamp: {
+      right: 20,
+      borderColor: t.red,
+      transform: [{ rotate: '22deg' }],
+    },
+    likeStampText: {
+      fontSize: 22, fontWeight: '800', color: t.green, letterSpacing: 2,
+    },
+    nopeStampText: {
+      fontSize: 22, fontWeight: '800', color: t.red, letterSpacing: 2,
+    },
+    infoOverlay: {
+      position: 'absolute', bottom: 0, left: 0, right: 0,
+      paddingHorizontal: 18, paddingTop: 14, paddingBottom: 18,
+      backgroundColor: t.card,
+      borderTopLeftRadius: 18, borderTopRightRadius: 18,
+      zIndex: 3,
+    },
+    name: { fontSize: 20, fontWeight: '700', color: t.text, marginBottom: 4, letterSpacing: -0.3 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },
+    metaText: { fontSize: 13, color: t.textSecondary, fontWeight: '500' },
+    cuisine: { fontSize: 12, color: t.textTertiary, marginBottom: 2 },
+    address: { fontSize: 12, color: t.textQuaternary },
+  });
+}

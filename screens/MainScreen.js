@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  Switch,
   ActivityIndicator,
   ScrollView,
   Animated,
@@ -23,6 +24,7 @@ import { consumePendingLocation } from '../services/locationBridge';
 import { useRestaurants } from '../context/RestaurantContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
+import { trackEvent } from '../services/analytics';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const COMPACT_HEADER = SCREEN_WIDTH < 400;
@@ -58,6 +60,7 @@ const CUISINE_OPTIONS = [
 
 export default function MainScreen({ navigation }) {
   const t = useTheme();
+  const styles = useMemo(() => createStyles(t), [t]);
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -67,13 +70,19 @@ export default function MainScreen({ navigation }) {
   const [sliderRadius, setSliderRadius] = useState(1);
   const radiusTimeout = useRef(null);
   const [cuisineTypes, setCuisineTypes] = useState([]);
-  const [noFastFood, setNoFastFood] = useState(false);
-  const [noConvenienceStore, setNoConvenienceStore] = useState(false);
+  const [noFastFood, setNoFastFood] = useState(true);
+  const [noConvenienceStore, setNoConvenienceStore] = useState(true);
   const [cuisineModalVisible, setCuisineModalVisible] = useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
 
-  const { likeRestaurant, dislikeRestaurant, likedRestaurants, notNowRestaurants, clearAll } = useRestaurants();
+  const {
+    likeRestaurant,
+    dislikeRestaurant,
+    likedRestaurants,
+    notNowRestaurants,
+    clearAll,
+  } = useRestaurants();
 
   function handleReset() {
     Alert.alert(
@@ -81,8 +90,23 @@ export default function MainScreen({ navigation }) {
       'This will clear all your liked and passed restaurants.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset', style: 'destructive', onPress: () => { clearAll(); setRestaurants([]); if (location) loadRestaurants(location, radius, cuisineTypes, noFastFood, noConvenienceStore); } },
-      ]
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: () => {
+            clearAll();
+            setRestaurants([]);
+            if (location)
+              loadRestaurants(
+                location,
+                radius,
+                cuisineTypes,
+                noFastFood,
+                noConvenienceStore,
+              );
+          },
+        },
+      ],
     );
   }
   const isFetching = useRef(false);
@@ -94,7 +118,12 @@ export default function MainScreen({ navigation }) {
 
   function animateButton(anim) {
     Animated.sequence([
-      Animated.spring(anim, { toValue: 1.3, useNativeDriver: true, speed: 50, bounciness: 20 }),
+      Animated.spring(anim, {
+        toValue: 1.3,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 20,
+      }),
       Animated.spring(anim, { toValue: 1, useNativeDriver: true, speed: 20 }),
     ]).start();
   }
@@ -107,17 +136,19 @@ export default function MainScreen({ navigation }) {
   }, []);
 
   // Pick up location (and optional radius) set by MapPickerScreen when this screen regains focus
-  useFocusEffect(useCallback(() => {
-    const pending = consumePendingLocation();
-    if (pending) {
-      setLocation(pending.coords);
-      setLocationLabel('Selected Location');
-      if (pending.radius != null) {
-        setRadius(pending.radius);
-        setSliderRadius(pending.radius);
+  useFocusEffect(
+    useCallback(() => {
+      const pending = consumePendingLocation();
+      if (pending) {
+        setLocation(pending.coords);
+        setLocationLabel('Selected Location');
+        if (pending.radius != null) {
+          setRadius(pending.radius);
+          setSliderRadius(pending.radius);
+        }
       }
-    }
-  }, []));
+    }, []),
+  );
 
   // Show decision prompt every 10 likes
   useEffect(() => {
@@ -131,7 +162,13 @@ export default function MainScreen({ navigation }) {
   useEffect(() => {
     if (location) {
       setRestaurants([]);
-      loadRestaurants(location, radius, cuisineTypes, noFastFood, noConvenienceStore);
+      loadRestaurants(
+        location,
+        radius,
+        cuisineTypes,
+        noFastFood,
+        noConvenienceStore,
+      );
     }
   }, [location, radius, cuisineTypes, noFastFood, noConvenienceStore]);
 
@@ -145,7 +182,9 @@ export default function MainScreen({ navigation }) {
       return;
     }
     try {
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
       setLocation(loc.coords);
       setLocationLabel('Current Location');
     } catch (e) {
@@ -160,7 +199,13 @@ export default function MainScreen({ navigation }) {
 
   // ── Restaurant loading ────────────────────────────────────────
 
-  async function loadRestaurants(loc, rad, cuisines, excludeFastFood = false, excludeConvenience = false) {
+  async function loadRestaurants(
+    loc,
+    rad,
+    cuisines,
+    excludeFastFood = false,
+    excludeConvenience = false,
+  ) {
     if (isFetching.current) return;
     isFetching.current = true;
     setLoading(true);
@@ -185,19 +230,38 @@ export default function MainScreen({ navigation }) {
 
   function handleSwipeRight(restaurant) {
     likeRestaurant(restaurant);
+    trackEvent('restaurant_liked', {
+      restaurant_id: restaurant.id,
+      name: restaurant.name,
+      rating: restaurant.rating,
+      price_level: restaurant.priceLevel,
+      cuisine: restaurant.tags?.[0],
+    });
     removeTopCard(restaurant.id);
   }
 
   function handleSwipeLeft(restaurant) {
     dislikeRestaurant(restaurant);
+    trackEvent('restaurant_skipped', {
+      restaurant_id: restaurant.id,
+      name: restaurant.name,
+      rating: restaurant.rating,
+      price_level: restaurant.priceLevel,
+    });
     removeTopCard(restaurant.id);
   }
 
-function removeTopCard(id) {
+  function removeTopCard(id) {
     setRestaurants((prev) => {
       const remaining = prev.filter((r) => r.id !== id);
       if (remaining.length < 5 && location && !isFetching.current) {
-        loadRestaurants(location, radius, cuisineTypes, noFastFood, noConvenienceStore);
+        loadRestaurants(
+          location,
+          radius,
+          cuisineTypes,
+          noFastFood,
+          noConvenienceStore,
+        );
       }
       return remaining;
     });
@@ -215,30 +279,55 @@ function removeTopCard(id) {
   // ── Render ────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: t.bg }]} edges={['top']}>
-
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: t.bg }]}
+      edges={['top']}
+    >
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: t.surface, borderBottomColor: t.separator }]}>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: t.surface, borderBottomColor: t.separator },
+        ]}
+      >
         <View style={styles.headerTop}>
-          <Text style={[styles.headerTitle, { color: t.text }]}>{COMPACT_HEADER ? '🍽️ Food' : 'foodFinder 🍽️'}</Text>
+          <Text style={[styles.headerTitle, { color: t.text }]}>
+            {COMPACT_HEADER ? '🍽️ Food' : 'foodFinder 🍽️'}
+          </Text>
           <View style={styles.headerRight}>
             <View>
-              <TouchableOpacity style={styles.locationButton} onPress={() => setLocationModalVisible(!locationModalVisible)}>
+              <TouchableOpacity
+                style={styles.locationButton}
+                onPress={() => setLocationModalVisible(!locationModalVisible)}
+              >
                 <Text style={styles.locationIcon}>📍</Text>
-                <Text style={styles.locationLabel} numberOfLines={1}>{locationLabel}</Text>
+                <Text style={styles.locationLabel} numberOfLines={1}>
+                  {locationLabel}
+                </Text>
                 <Text style={styles.locationChevron}>▾</Text>
               </TouchableOpacity>
               {locationModalVisible && (
                 <View style={styles.locationDropdown}>
-                  <TouchableOpacity style={styles.dropdownItem} onPress={useCurrentLocation}>
+                  <TouchableOpacity
+                    style={styles.dropdownItem}
+                    onPress={useCurrentLocation}
+                  >
                     <Text style={styles.dropdownIcon}>📍</Text>
-                    <Text style={styles.dropdownText}>Use Current Location</Text>
+                    <Text style={styles.dropdownText}>
+                      Use Current Location
+                    </Text>
                   </TouchableOpacity>
                   <View style={styles.dropdownDivider} />
-                  <TouchableOpacity style={styles.dropdownItem} onPress={() => {
-                    setLocationModalVisible(false);
-                    navigation.navigate('MapPicker', { initialCoords: location, initialRadius: radius });
-                  }}>
+                  <TouchableOpacity
+                    style={styles.dropdownItem}
+                    onPress={() => {
+                      setLocationModalVisible(false);
+                      navigation.navigate('MapPicker', {
+                        initialCoords: location,
+                        initialRadius: radius,
+                      });
+                    }}
+                  >
                     <Text style={styles.dropdownIcon}>🗺️</Text>
                     <Text style={styles.dropdownText}>Pick on Map</Text>
                   </TouchableOpacity>
@@ -252,16 +341,22 @@ function removeTopCard(id) {
         </View>
         <View style={styles.filtersRow}>
           <View style={styles.sliderRow}>
-            <Text style={styles.sliderLabel}>📍 {sliderRadius < 1 ? sliderRadius.toFixed(1) : Math.round(sliderRadius)} mi</Text>
+            <Text style={styles.sliderLabel}>
+              📍{' '}
+              {sliderRadius < 1
+                ? sliderRadius.toFixed(1)
+                : Math.round(sliderRadius)}{' '}
+              mi
+            </Text>
             <Slider
               style={styles.slider}
               minimumValue={RADIUS_MIN}
               maximumValue={RADIUS_MAX}
               value={sliderRadius}
               step={0.5}
-              minimumTrackTintColor="#212529"
-              maximumTrackTintColor="#ddd"
-              thumbTintColor="#212529"
+              minimumTrackTintColor={t.accent}
+              maximumTrackTintColor='#ddd'
+              thumbTintColor={t.accent}
               onValueChange={(val) => {
                 setSliderRadius(val);
                 clearTimeout(radiusTimeout.current);
@@ -271,19 +366,45 @@ function removeTopCard(id) {
             <Text style={styles.sliderMax}>{RADIUS_MAX} mi</Text>
           </View>
           {(() => {
-            const hasFilters = cuisineTypes.length > 0 || noFastFood || noConvenienceStore;
+            const hasFilters = cuisineTypes.length > 0;
             let label, emoji;
-            if (cuisineTypes.length === 0) { label = 'Any'; emoji = '🍽️'; }
-            else if (cuisineTypes.length === 1) {
-              const opt = CUISINE_OPTIONS.find((c) => c.type === cuisineTypes[0]);
-              label = opt?.label ?? 'Custom'; emoji = opt?.emoji ?? '🍽️';
-            } else { label = `${cuisineTypes.length} Cuisines`; emoji = '🍽️'; }
+            if (cuisineTypes.length === 0) {
+              label = 'Any';
+              emoji = '🍽️';
+            } else if (cuisineTypes.length === 1) {
+              const opt = CUISINE_OPTIONS.find(
+                (c) => c.type === cuisineTypes[0],
+              );
+              label = opt?.label ?? 'Custom';
+              emoji = opt?.emoji ?? '🍽️';
+            } else {
+              label = `${cuisineTypes.length} Cuisines`;
+              emoji = '🍽️';
+            }
             return (
-              <TouchableOpacity style={[styles.cuisineChip, hasFilters && styles.cuisineChipActive]} onPress={() => setCuisineModalVisible(true)}>
-                <Text style={[styles.cuisineChipText, hasFilters && { color: '#fff' }]}>
-                  {emoji} {label}{noFastFood ? '  🚫🍟' : ''}{noConvenienceStore ? '  🚫🏪' : ''}
+              <TouchableOpacity
+                style={[
+                  styles.cuisineChip,
+                  hasFilters && styles.cuisineChipActive,
+                ]}
+                onPress={() => setCuisineModalVisible(true)}
+              >
+                <Text
+                  style={[
+                    styles.cuisineChipText,
+                    hasFilters && { color: '#fff' },
+                  ]}
+                >
+                  {emoji} {label}
                 </Text>
-                <Text style={[styles.cuisineChevron, hasFilters && { color: 'rgba(255,255,255,0.6)' }]}>▾</Text>
+                <Text
+                  style={[
+                    styles.cuisineChevron,
+                    hasFilters && { color: 'rgba(255,255,255,0.6)' },
+                  ]}
+                >
+                  ▾
+                </Text>
               </TouchableOpacity>
             );
           })()}
@@ -294,51 +415,86 @@ function removeTopCard(id) {
       <View style={styles.cardArea}>
         {loading && pendingRestaurants.length === 0 ? (
           <View style={styles.centered}>
-            <ActivityIndicator size="large" color="#212529" />
+            <ActivityIndicator size='large' color={t.accent} />
             <Text style={styles.loadingText}>Finding places near you...</Text>
           </View>
         ) : error ? (
           <View style={styles.centered}>
             <Text style={styles.errorEmoji}>😕</Text>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={requestCurrentLocation}>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={requestCurrentLocation}
+            >
               <Text style={styles.retryText}>Try Again</Text>
             </TouchableOpacity>
           </View>
         ) : !location ? (
           <View style={styles.centered}>
             <Text style={styles.errorEmoji}>📍</Text>
-            <Text style={styles.errorText}>We need your location to find nearby restaurants.</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={requestCurrentLocation}>
+            <Text style={styles.errorText}>
+              We need your location to find nearby restaurants.
+            </Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={requestCurrentLocation}
+            >
               <Text style={styles.retryText}>Allow Location</Text>
             </TouchableOpacity>
           </View>
         ) : pendingRestaurants.length === 0 ? (
           <View style={styles.centered}>
             <Text style={styles.errorEmoji}>🍽️</Text>
-            <Text style={styles.emptyTitle}>You've seen all nearby places!</Text>
-            <Text style={styles.emptySubtitle}>Try one of these to find more:</Text>
-            <TouchableOpacity style={styles.emptyAction} onPress={() => setLocationModalVisible(true)}>
+            <Text style={styles.emptyTitle}>
+              You've seen all nearby places!
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              Try one of these to find more:
+            </Text>
+            <TouchableOpacity
+              style={styles.emptyAction}
+              onPress={() => setLocationModalVisible(true)}
+            >
               <Text style={styles.emptyActionIcon}>📍</Text>
               <View style={styles.emptyActionText}>
                 <Text style={styles.emptyActionTitle}>Update Location</Text>
-                <Text style={styles.emptyActionSub}>Search in a different area</Text>
+                <Text style={styles.emptyActionSub}>
+                  Search in a different area
+                </Text>
               </View>
               <Text style={styles.emptyActionChevron}>›</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.emptyAction} onPress={() => navigation.navigate('Liked')}>
+            <TouchableOpacity
+              style={styles.emptyAction}
+              onPress={() => navigation.navigate('Liked')}
+            >
               <Text style={styles.emptyActionIcon}>💚</Text>
               <View style={styles.emptyActionText}>
                 <Text style={styles.emptyActionTitle}>Review Liked Places</Text>
-                <Text style={styles.emptyActionSub}>Pick somewhere you already saved</Text>
+                <Text style={styles.emptyActionSub}>
+                  Pick somewhere you already saved
+                </Text>
               </View>
               <Text style={styles.emptyActionChevron}>›</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.emptyAction} onPress={() => { const newR = Math.min(radius + 1, RADIUS_MAX); setRadius(newR); setSliderRadius(newR); }}>
+            <TouchableOpacity
+              style={styles.emptyAction}
+              onPress={() => {
+                const newR = Math.min(radius + 1, RADIUS_MAX);
+                setRadius(newR);
+                setSliderRadius(newR);
+              }}
+            >
               <Text style={styles.emptyActionIcon}>📏</Text>
               <View style={styles.emptyActionText}>
                 <Text style={styles.emptyActionTitle}>Increase Distance</Text>
-                <Text style={styles.emptyActionSub}>Currently set to {sliderRadius < 1 ? sliderRadius.toFixed(1) : Math.round(sliderRadius)} mi — tap to expand</Text>
+                <Text style={styles.emptyActionSub}>
+                  Currently set to{' '}
+                  {sliderRadius < 1
+                    ? sliderRadius.toFixed(1)
+                    : Math.round(sliderRadius)}{' '}
+                  mi — tap to expand
+                </Text>
               </View>
               <Text style={styles.emptyActionChevron}>›</Text>
             </TouchableOpacity>
@@ -355,7 +511,9 @@ function removeTopCard(id) {
                 index={index}
                 onSwipeRight={handleSwipeRight}
                 onSwipeLeft={handleSwipeLeft}
-                onPress={(r) => navigation.navigate('Detail', { restaurant: r })}
+                onPress={(r) =>
+                  navigation.navigate('Detail', { restaurant: r })
+                }
               />
             );
           })
@@ -364,20 +522,31 @@ function removeTopCard(id) {
 
       {/* Action buttons */}
       {pendingRestaurants.length > 0 && !loading && (
-        <View style={[styles.actionRow, { backgroundColor: t.surface, borderTopColor: t.separator }]}>
+        <View
+          style={[
+            styles.actionRow,
+            { backgroundColor: t.surface, borderTopColor: t.separator },
+          ]}
+        >
           <Animated.View style={{ transform: [{ scale: nopeScale }] }}>
             <TouchableOpacity
               style={[styles.actionButton, styles.nopeButton]}
-              onPress={() => { animateButton(nopeScale); topCardRef.current?.swipeLeft(); }}
+              onPress={() => {
+                animateButton(nopeScale);
+                topCardRef.current?.swipeLeft();
+              }}
               activeOpacity={0.8}
             >
               <Text style={styles.actionButtonText}>✕</Text>
             </TouchableOpacity>
           </Animated.View>
-<Animated.View style={{ transform: [{ scale: likeScale }] }}>
+          <Animated.View style={{ transform: [{ scale: likeScale }] }}>
             <TouchableOpacity
               style={[styles.actionButton, styles.likeButton]}
-              onPress={() => { animateButton(likeScale); topCardRef.current?.swipeRight(); }}
+              onPress={() => {
+                animateButton(likeScale);
+                topCardRef.current?.swipeRight();
+              }}
               activeOpacity={0.8}
             >
               <Text style={styles.actionButtonText}>♥</Text>
@@ -387,7 +556,12 @@ function removeTopCard(id) {
       )}
 
       {/* Decision prompt — shown every 10 likes */}
-      <Modal visible={decisionPrompt} transparent animationType="fade" onRequestClose={() => setDecisionPrompt(false)}>
+      <Modal
+        visible={decisionPrompt}
+        transparent
+        animationType='fade'
+        onRequestClose={() => setDecisionPrompt(false)}
+      >
         <View style={styles.decisionOverlay}>
           <View style={styles.decisionSheet}>
             <Text style={styles.decisionEmoji}>🎉</Text>
@@ -399,17 +573,28 @@ function removeTopCard(id) {
             </Text>
 
             {/* Preview row of liked restaurant images */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.previewRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.previewRow}
+            >
               {likedRestaurants.slice(0, 6).map((r) => (
                 <View key={r.id} style={styles.previewItem}>
                   {r.images?.[0] ? (
-                    <Image source={{ uri: r.images[0] }} style={styles.previewImage} />
+                    <Image
+                      source={{ uri: r.images[0] }}
+                      style={styles.previewImage}
+                    />
                   ) : (
-                    <View style={[styles.previewImage, styles.previewPlaceholder]}>
+                    <View
+                      style={[styles.previewImage, styles.previewPlaceholder]}
+                    >
                       <Text>🍽️</Text>
                     </View>
                   )}
-                  <Text style={styles.previewName} numberOfLines={1}>{r.name}</Text>
+                  <Text style={styles.previewName} numberOfLines={1}>
+                    {r.name}
+                  </Text>
                 </View>
               ))}
             </ScrollView>
@@ -423,7 +608,10 @@ function removeTopCard(id) {
             >
               <Text style={styles.decisionGoText}>Swipe to Decide →</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setDecisionPrompt(false)} style={styles.decisionDismiss}>
+            <TouchableOpacity
+              onPress={() => setDecisionPrompt(false)}
+              style={styles.decisionDismiss}
+            >
               <Text style={styles.decisionDismissText}>Keep Swiping</Text>
             </TouchableOpacity>
           </View>
@@ -442,73 +630,92 @@ function removeTopCard(id) {
       {/* Cuisine picker modal */}
       <Modal
         visible={cuisineModalVisible}
-        animationType="slide"
+        animationType='slide'
         transparent
         onRequestClose={() => setCuisineModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setCuisineModalVisible(false)} />
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={() => setCuisineModalVisible(false)}
+          />
           <View style={[styles.modalSheet, styles.cuisineSheet]}>
             <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>What are you in the mood for?</Text>
-            <View style={styles.filterChipsRow}>
-              <TouchableOpacity
-                style={[styles.noFastFoodChip, noFastFood && styles.noFastFoodChipActive]}
-                onPress={() => setNoFastFood(!noFastFood)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.noFastFoodText, noFastFood && styles.noFastFoodTextActive]}>
-                  🚫🍟  No Fast Food
+            <View style={styles.filterToggleSection}>
+              <View style={styles.filterToggleRow}>
+                <Switch
+                  value={noFastFood}
+                  onValueChange={setNoFastFood}
+                  trackColor={{ false: t.border, true: t.accent }}
+                  thumbColor='#fff'
+                />
+                <Text style={styles.filterToggleLabel}>🚫🍟 No Fast Food</Text>
+              </View>
+              <View style={styles.filterToggleRow}>
+                <Switch
+                  value={noConvenienceStore}
+                  onValueChange={setNoConvenienceStore}
+                  trackColor={{ false: t.border, true: t.accent }}
+                  thumbColor='#fff'
+                />
+                <Text style={styles.filterToggleLabel}>
+                  🚫🏪 No Convenience Stores
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.noFastFoodChip, noConvenienceStore && styles.noFastFoodChipActive]}
-                onPress={() => setNoConvenienceStore(!noConvenienceStore)}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.noFastFoodText, noConvenienceStore && styles.noFastFoodTextActive]}>
-                  🚫🏪  No Convenience Stores
-                </Text>
-              </TouchableOpacity>
+              </View>
             </View>
+            <Text style={styles.modalTitle}>What are you in the mood for?</Text>
             <FlatList
               data={CUISINE_OPTIONS}
               keyExtractor={(item) => item.label}
               numColumns={3}
               columnWrapperStyle={styles.cuisineGrid}
               renderItem={({ item }) => {
-                const active = item.type === null
-                  ? cuisineTypes.length === 0 && !noFastFood && !noConvenienceStore
-                  : cuisineTypes.includes(item.type);
+                const active =
+                  item.type === null
+                    ? cuisineTypes.length === 0
+                    : cuisineTypes.includes(item.type);
                 return (
                   <TouchableOpacity
-                    style={[styles.cuisineOption, active && styles.cuisineOptionActive]}
+                    style={[
+                      styles.cuisineOption,
+                      active && styles.cuisineOptionActive,
+                    ]}
                     onPress={() => {
                       if (item.type === null) {
                         setCuisineTypes([]);
-                        setNoFastFood(false);
-                        setNoConvenienceStore(false);
                       } else {
                         setCuisineTypes((prev) =>
                           prev.includes(item.type)
                             ? prev.filter((t) => t !== item.type)
-                            : [...prev, item.type]
+                            : [...prev, item.type],
                         );
                       }
                     }}
                     activeOpacity={0.75}
                   >
                     <Text style={styles.cuisineOptionEmoji}>{item.emoji}</Text>
-                    <Text style={[styles.cuisineOptionLabel, active && styles.cuisineOptionLabelActive]} numberOfLines={1}>
+                    <Text
+                      style={[
+                        styles.cuisineOptionLabel,
+                        active && styles.cuisineOptionLabelActive,
+                      ]}
+                      numberOfLines={1}
+                    >
                       {item.label}
                     </Text>
                   </TouchableOpacity>
                 );
               }}
             />
-            <TouchableOpacity style={styles.cuisineDoneButton} onPress={() => setCuisineModalVisible(false)}>
+            <TouchableOpacity
+              style={styles.cuisineDoneButton}
+              onPress={() => setCuisineModalVisible(false)}
+            >
               <Text style={styles.cuisineDoneText}>
-                {cuisineTypes.length > 0 ? `Show Results (${cuisineTypes.length} selected)` : 'Done'}
+                {cuisineTypes.length > 0
+                  ? `Show Results (${cuisineTypes.length} selected)`
+                  : 'Done'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -538,189 +745,365 @@ function removeTopCard(id) {
           </View>
         </View>
       )}
-
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f6f7' },
+function createStyles(t) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: t.bg },
 
-  // Header
-  header: {
-    paddingTop: 8, paddingHorizontal: 16, paddingBottom: 10,
-    backgroundColor: '#ffffff', borderBottomWidth: 0, zIndex: 100,
-  },
-  headerTop: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: 8,
-  },
-  headerTitle: { fontSize: COMPACT_HEADER ? 20 : 24, fontWeight: '700', color: '#212529', letterSpacing: -0.5 },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  locationButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: '#f1f3f5', borderRadius: 20,
-    paddingHorizontal: 12, paddingVertical: 7,
-  },
-  resetButton: {
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#212529',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  resetButtonText: { fontSize: 14, color: '#fff', fontWeight: '700' },
-  locationIcon: { fontSize: 12 },
-  locationLabel: { fontSize: 13, fontWeight: '500', color: '#495057' },
-  locationChevron: { fontSize: 10, color: '#868e96' },
-  locationDropdown: {
-    position: 'absolute', top: '100%', right: 0, marginTop: 4,
-    backgroundColor: '#fff', borderRadius: 14, width: 210,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.1, shadowRadius: 24, elevation: 8,
-    zIndex: 100, overflow: 'hidden',
-  },
-  dropdownItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 16, paddingVertical: 13,
-  },
-  dropdownIcon: { fontSize: 16 },
-  dropdownText: { fontSize: 15, fontWeight: '400', color: '#212529' },
-  dropdownDivider: { height: 0.5, backgroundColor: '#e9ecef', marginLeft: 42 },
-  filtersRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  sliderRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
-  slider: { flex: 1, height: 36 },
-  sliderLabel: { fontSize: 12, fontWeight: '600', color: '#212529', minWidth: 42 },
-  sliderMax: { fontSize: 11, color: '#868e96', minWidth: 38, textAlign: 'right' },
-  filterChipsRow: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12,
-  },
-  noFastFoodChip: {
-    paddingHorizontal: 16, paddingVertical: 10,
-    borderRadius: 12, backgroundColor: '#f1f3f5',
-  },
-  noFastFoodChipActive: { backgroundColor: '#212529' },
-  noFastFoodText: { fontSize: 14, fontWeight: '600', color: '#495057' },
-  noFastFoodTextActive: { color: '#fff' },
-  cuisineChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
-    backgroundColor: '#f1f3f5',
-  },
-  cuisineChipActive: { backgroundColor: '#212529' },
-  cuisineChipText: { fontSize: 13, fontWeight: '500', color: '#495057' },
-  cuisineChevron: { fontSize: 10, color: '#868e96' },
-  cuisineSheet: { maxHeight: '75%', paddingBottom: 20 },
-  cuisineDoneButton: {
-    backgroundColor: '#212529', borderRadius: 14,
-    paddingVertical: 14, alignItems: 'center', marginTop: 8, marginBottom: 8,
-  },
-  cuisineDoneText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  cuisineGrid: { justifyContent: 'space-between', marginBottom: 10 },
-  cuisineOption: {
-    flex: 1, marginHorizontal: 3, paddingVertical: 12,
-    borderRadius: 14, backgroundColor: '#f1f3f5',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  cuisineOptionActive: { backgroundColor: '#212529' },
-  cuisineOptionEmoji: { fontSize: 24, marginBottom: 4 },
-  cuisineOptionLabel: { fontSize: 11, fontWeight: '500', color: '#495057', textAlign: 'center' },
-  cuisineOptionLabelActive: { color: '#fff' },
+    // Header
+    header: {
+      paddingTop: 1,
+      paddingHorizontal: 16,
+      paddingBottom: 4,
+      backgroundColor: t.surface,
+      borderBottomWidth: 0,
+      zIndex: 100,
+    },
+    headerTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 4,
+    },
+    headerTitle: {
+      fontSize: COMPACT_HEADER ? 20 : 24,
+      fontWeight: '700',
+      color: t.text,
+      letterSpacing: -0.5,
+    },
+    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    locationButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: t.inputBg,
+      borderRadius: 20,
+      paddingHorizontal: 1,
+      paddingVertical: 7,
+    },
+    resetButton: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: t.accent,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    resetButtonText: { fontSize: 14, color: '#fff', fontWeight: '700' },
+    locationIcon: { fontSize: 12 },
+    locationLabel: { fontSize: 13, fontWeight: '500', color: t.textSecondary },
+    locationChevron: { fontSize: 10, color: t.textTertiary },
+    locationDropdown: {
+      position: 'absolute',
+      top: '100%',
+      right: 0,
+      marginTop: 4,
+      backgroundColor: t.surface,
+      borderRadius: 14,
+      width: 210,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.1,
+      shadowRadius: 24,
+      elevation: 8,
+      zIndex: 100,
+      overflow: 'hidden',
+    },
+    dropdownItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 1,
+    },
+    dropdownIcon: { fontSize: 16 },
+    dropdownText: { fontSize: 15, fontWeight: '400', color: t.text },
+    dropdownDivider: {
+      height: 0.5,
+      backgroundColor: t.separator,
+      marginLeft: 42,
+    },
+    filtersRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    sliderRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4 },
+    slider: { flex: 1, height: 36 },
+    sliderLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: t.text,
+      minWidth: 42,
+    },
+    sliderMax: {
+      fontSize: 11,
+      color: t.textTertiary,
+      minWidth: 38,
+      textAlign: 'right',
+    },
+    filterToggleSection: { marginBottom: 12 },
+    filterToggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+    },
+    filterToggleLabel: { fontSize: 14, fontWeight: '500', color: t.text },
+    cuisineChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+      backgroundColor: t.chipInactive,
+    },
+    cuisineChipActive: { backgroundColor: t.chipActive },
+    cuisineChipText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: t.chipInactiveText,
+    },
+    cuisineChevron: { fontSize: 10, color: t.textTertiary },
+    cuisineSheet: { maxHeight: '75%', paddingBottom: 20 },
+    cuisineDoneButton: {
+      backgroundColor: t.accent,
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: 'center',
+      marginTop: 8,
+      marginBottom: 8,
+    },
+    cuisineDoneText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+    cuisineGrid: { justifyContent: 'space-between', marginBottom: 10 },
+    cuisineOption: {
+      flex: 1,
+      marginHorizontal: 3,
+      paddingVertical: 12,
+      borderRadius: 14,
+      backgroundColor: t.chipInactive,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    cuisineOptionActive: { backgroundColor: t.chipActive },
+    cuisineOptionEmoji: { fontSize: 24, marginBottom: 4 },
+    cuisineOptionLabel: {
+      fontSize: 11,
+      fontWeight: '500',
+      color: t.chipInactiveText,
+      textAlign: 'center',
+    },
+    cuisineOptionLabelActive: { color: t.chipActiveText },
 
-  // Card area
-  cardArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  centered: { alignItems: 'center', paddingHorizontal: 36 },
-  loadingText: { marginTop: 16, fontSize: 15, color: '#868e96' },
-  errorEmoji: { fontSize: 48, marginBottom: 12 },
-  errorText: { fontSize: 15, color: '#495057', textAlign: 'center', lineHeight: 22, marginBottom: 20 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#212529', textAlign: 'center', marginBottom: 6 },
-  emptySubtitle: { fontSize: 14, color: '#868e96', textAlign: 'center', marginBottom: 24 },
-  emptyAction: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', borderRadius: 14, padding: 14,
-    marginBottom: 8, width: '100%',
-  },
-  emptyActionIcon: { fontSize: 22 },
-  emptyActionText: { flex: 1 },
-  emptyActionTitle: { fontSize: 15, fontWeight: '600', color: '#212529', marginBottom: 2 },
-  emptyActionSub: { fontSize: 12, color: '#868e96' },
-  emptyActionChevron: { fontSize: 18, color: '#dee2e6', fontWeight: '600' },
-  retryButton: { backgroundColor: '#212529', paddingHorizontal: 28, paddingVertical: 12, borderRadius: 22 },
-  retryText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+    // Card area
+    cardArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    centered: { alignItems: 'center', paddingHorizontal: 36 },
+    loadingText: { marginTop: 16, fontSize: 15, color: t.textTertiary },
+    errorEmoji: { fontSize: 48, marginBottom: 12 },
+    errorText: {
+      fontSize: 15,
+      color: t.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: 20,
+    },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: t.text,
+      textAlign: 'center',
+      marginBottom: 6,
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: t.textTertiary,
+      textAlign: 'center',
+      marginBottom: 24,
+    },
+    emptyAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: t.card,
+      borderRadius: 14,
+      padding: 14,
+      marginBottom: 8,
+      width: '100%',
+    },
+    emptyActionIcon: { fontSize: 22 },
+    emptyActionText: { flex: 1 },
+    emptyActionTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: t.text,
+      marginBottom: 2,
+    },
+    emptyActionSub: { fontSize: 12, color: t.textTertiary },
+    emptyActionChevron: { fontSize: 18, color: t.border, fontWeight: '600' },
+    retryButton: {
+      backgroundColor: t.accent,
+      paddingHorizontal: 28,
+      paddingVertical: 12,
+      borderRadius: 22,
+    },
+    retryText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 
-  // Action buttons
-  actionRow: {
-    flexDirection: 'row', justifyContent: 'center',
-    gap: 40, paddingVertical: 16, paddingBottom: 24,
-    backgroundColor: '#ffffff',
-    borderTopWidth: 0,
-  },
-  actionButton: {
-    width: 60, height: 60, borderRadius: 30,
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#fff',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
-  },
-  nopeButton: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#ff6b6b' },
-  likeButton: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#51cf66' },
-  actionButtonText: { fontSize: 24, fontWeight: '600' },
+    // Action buttons
+    actionRow: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: 40,
+      marginTop: -12,
+      paddingBottom: 8,
+      backgroundColor: 'transparent',
+      borderTopWidth: 0,
+    },
+    actionButton: {
+      width: 60,
+      height: 60,
+      borderRadius: 30,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: t.card,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.06,
+      shadowRadius: 8,
+      elevation: 2,
+    },
+    nopeButton: {
+      backgroundColor: t.card,
+      borderWidth: 1.5,
+      borderColor: t.red,
+    },
+    likeButton: {
+      backgroundColor: t.card,
+      borderWidth: 1.5,
+      borderColor: t.green,
+    },
+    actionButtonText: { fontSize: 24, fontWeight: '600' },
 
-  // Modal (cuisine picker)
-  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.25)' },
-  modalSheet: {
-    backgroundColor: '#ffffff',
-    borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    paddingHorizontal: 16, paddingBottom: 40,
-    maxHeight: '80%',
-  },
-  modalHandle: {
-    width: 36, height: 4, borderRadius: 2,
-    backgroundColor: '#dee2e6', alignSelf: 'center', marginTop: 10, marginBottom: 16,
-  },
-  modalTitle: { fontSize: 20, fontWeight: '700', color: '#212529', marginBottom: 14, letterSpacing: -0.3 },
-  // Decision prompt
-  decisionOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.35)',
-    justifyContent: 'center', alignItems: 'center', padding: 24,
-  },
-  decisionSheet: {
-    backgroundColor: '#fff', borderRadius: 20,
-    padding: 24, width: '100%', alignItems: 'center',
-  },
-  decisionEmoji: { fontSize: 44, marginBottom: 12 },
-  decisionTitle: { fontSize: 20, fontWeight: '700', color: '#212529', textAlign: 'center', marginBottom: 8, letterSpacing: -0.3 },
-  decisionSub: { fontSize: 14, color: '#868e96', textAlign: 'center', lineHeight: 20, marginBottom: 20 },
-  previewRow: { marginBottom: 20, alignSelf: 'stretch' },
-  previewItem: { alignItems: 'center', marginRight: 12, width: 68 },
-  previewImage: { width: 68, height: 68, borderRadius: 12, marginBottom: 4 },
-  previewPlaceholder: { backgroundColor: '#f1f3f5', justifyContent: 'center', alignItems: 'center' },
-  previewName: { fontSize: 11, color: '#868e96', textAlign: 'center' },
-  decisionGoButton: {
-    backgroundColor: '#212529', borderRadius: 14,
-    paddingVertical: 14, paddingHorizontal: 32,
-    width: '100%', alignItems: 'center', marginBottom: 10,
-  },
-  decisionGoText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  decisionDismiss: { paddingVertical: 8 },
-  decisionDismissText: { color: '#868e96', fontSize: 14, fontWeight: '500' },
+    // Modal (cuisine picker)
+    modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+    modalBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: t.overlay,
+    },
+    modalSheet: {
+      backgroundColor: t.surface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingHorizontal: 16,
+      paddingBottom: 40,
+      maxHeight: '80%',
+    },
+    modalHandle: {
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: t.border,
+      alignSelf: 'center',
+      marginTop: 10,
+      marginBottom: 16,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: t.text,
+      marginBottom: 14,
+      letterSpacing: -0.3,
+    },
+    // Decision prompt
+    decisionOverlay: {
+      flex: 1,
+      backgroundColor: t.overlay,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    decisionSheet: {
+      backgroundColor: t.card,
+      borderRadius: 20,
+      padding: 24,
+      width: '100%',
+      alignItems: 'center',
+    },
+    decisionEmoji: { fontSize: 44, marginBottom: 12 },
+    decisionTitle: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: t.text,
+      textAlign: 'center',
+      marginBottom: 8,
+      letterSpacing: -0.3,
+    },
+    decisionSub: {
+      fontSize: 14,
+      color: t.textTertiary,
+      textAlign: 'center',
+      lineHeight: 20,
+      marginBottom: 20,
+    },
+    previewRow: { marginBottom: 20, alignSelf: 'stretch' },
+    previewItem: { alignItems: 'center', marginRight: 12, width: 68 },
+    previewImage: { width: 68, height: 68, borderRadius: 12, marginBottom: 4 },
+    previewPlaceholder: {
+      backgroundColor: t.inputBg,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    previewName: { fontSize: 11, color: t.textTertiary, textAlign: 'center' },
+    decisionGoButton: {
+      backgroundColor: t.accent,
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 32,
+      width: '100%',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    decisionGoText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+    decisionDismiss: { paddingVertical: 8 },
+    decisionDismissText: {
+      color: t.textTertiary,
+      fontSize: 14,
+      fontWeight: '500',
+    },
 
-  // Tutorial overlay
-  tutorialOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(33,37,41,0.85)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    paddingBottom: 120,
-    zIndex: 200,
-  },
-  tutorialContent: { alignItems: 'center', paddingHorizontal: 40 },
-  tutorialEmoji: { fontSize: 44, marginBottom: 12 },
-  tutorialTitle: { fontSize: 22, fontWeight: '700', color: '#fff', textAlign: 'center', marginBottom: 10, letterSpacing: -0.3 },
-  tutorialText: { fontSize: 15, color: 'rgba(255,255,255,0.75)', textAlign: 'center', lineHeight: 22, marginBottom: 16 },
-  tutorialArrow: { fontSize: 32, color: '#fff', marginBottom: 20 },
-  tutorialButton: {
-    backgroundColor: '#ffffff', borderRadius: 14,
-    paddingVertical: 14, paddingHorizontal: 48,
-  },
-  tutorialButtonText: { color: '#212529', fontWeight: '600', fontSize: 17 },
-});
+    // Tutorial overlay
+    tutorialOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: t.overlay,
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      paddingBottom: 120,
+      zIndex: 200,
+    },
+    tutorialContent: { alignItems: 'center', paddingHorizontal: 40 },
+    tutorialEmoji: { fontSize: 44, marginBottom: 12 },
+    tutorialTitle: {
+      fontSize: 22,
+      fontWeight: '700',
+      color: '#fff',
+      textAlign: 'center',
+      marginBottom: 10,
+      letterSpacing: -0.3,
+    },
+    tutorialText: {
+      fontSize: 15,
+      color: 'rgba(255,255,255,0.75)',
+      textAlign: 'center',
+      lineHeight: 22,
+      marginBottom: 16,
+    },
+    tutorialArrow: { fontSize: 32, color: '#fff', marginBottom: 20 },
+    tutorialButton: {
+      backgroundColor: '#ffffff',
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 48,
+    },
+    tutorialButtonText: { color: t.text, fontWeight: '600', fontSize: 17 },
+  });
+}

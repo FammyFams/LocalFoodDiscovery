@@ -9,6 +9,7 @@ import {
   Share,
   Linking,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSettings } from '../context/SettingsContext';
 import { useRestaurants } from '../context/RestaurantContext';
 import { useTheme } from '../context/ThemeContext';
@@ -35,6 +36,7 @@ export default function AccountScreen({ navigation }) {
   const { settings, updateSettings } = useSettings();
   const { clearAll, likedRestaurants, notNowRestaurants } = useRestaurants();
   const t = useTheme();
+  const insets = useSafeAreaInsets();
 
   const dietEnabled = settings.dietRestrictionsEnabled || false;
   const dietPrefs = settings.dietPreferences || [];
@@ -179,28 +181,6 @@ export default function AccountScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Account / Auth */}
-      <View style={s.section}>
-        <Text style={s.sectionHeader}>ACCOUNT</Text>
-        <View style={s.card}>
-          <View style={s.authRow}>
-            <Text style={s.authEmoji}>🔐</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={s.authTitle}>Sign In</Text>
-              <Text style={s.authSub}>Sync your saves across devices</Text>
-            </View>
-          </View>
-          <View style={s.separator} />
-          <TouchableOpacity style={s.authButton} activeOpacity={0.5}>
-            <Text style={s.authButtonText}>Sign in with Google</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[s.authButton, s.authButtonApple]} activeOpacity={0.5}>
-            <Text style={[s.authButtonText, s.authButtonAppleText]}>Sign in with Apple</Text>
-          </TouchableOpacity>
-          <Text style={s.authNote}>Auth not configured yet</Text>
-        </View>
-      </View>
-
       {/* About */}
       <View style={s.section}>
         <Text style={s.sectionHeader}>ABOUT</Text>
@@ -227,7 +207,7 @@ export default function AccountScreen({ navigation }) {
         </View>
       </View>
 
-      <View style={{ height: 40 }} />
+      <View style={{ height: insets.bottom + 20 }} />
     </ScrollView>
   );
 }

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Circle } from 'react-native-maps';
 import Slider from '@react-native-community/slider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { setPendingLocation } from '../services/locationBridge';
+import { useTheme } from '../context/ThemeContext';
 
 const RADIUS_MIN = 0.5;
 const RADIUS_MAX = 5;
@@ -16,6 +17,8 @@ export default function MapPickerScreen({ navigation, route }) {
   const initialCoords = route.params?.initialCoords;
   const initialRadius = route.params?.initialRadius ?? 1;
   const insets = useSafeAreaInsets();
+  const t = useTheme();
+  const styles = useMemo(() => createStyles(t), [t]);
 
   const [marker, setMarker] = useState(null);
   const [radius, setRadius] = useState(initialRadius);
@@ -60,13 +63,13 @@ export default function MapPickerScreen({ navigation, route }) {
       >
         {marker && (
           <>
-            <Marker coordinate={marker} pinColor="#34AFA9" />
+            <Marker coordinate={marker} pinColor={t.accent} />
             <Circle
               center={marker}
               radius={milesToMeters(radius)}
-              strokeColor="#34AFA9"
+              strokeColor={t.accent}
               strokeWidth={2}
-              fillColor="rgba(255,107,53,0.12)"
+              fillColor={`${t.accent}20`}
             />
           </>
         )}
@@ -86,9 +89,9 @@ export default function MapPickerScreen({ navigation, route }) {
             maximumValue={RADIUS_MAX}
             value={radius}
             step={0.5}
-            minimumTrackTintColor="#34AFA9"
-            maximumTrackTintColor="#ddd"
-            thumbTintColor="#34AFA9"
+            minimumTrackTintColor={t.accent}
+            maximumTrackTintColor={t.border}
+            thumbTintColor={t.accent}
             onValueChange={setRadius}
           />
           <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
@@ -100,43 +103,45 @@ export default function MapPickerScreen({ navigation, route }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  map: { flex: 1 },
-  backButton: {
-    position: 'absolute', left: 16, zIndex: 10,
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2, shadowRadius: 4, elevation: 4,
-  },
-  backText: { fontSize: 28, fontWeight: '700', color: '#333', marginTop: -2 },
-  banner: {
-    position: 'absolute', alignSelf: 'center', zIndex: 10,
-    backgroundColor: '#fff', borderRadius: 20,
-    paddingHorizontal: 16, paddingVertical: 8,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
-  },
-  bannerText: { fontSize: 14, fontWeight: '600', color: '#333' },
-  panel: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 24, paddingTop: 20,
-    borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    shadowColor: '#000', shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.08, shadowRadius: 10, elevation: 10,
-  },
-  sliderRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4,
-  },
-  sliderLabel: { fontSize: 15, fontWeight: '700', color: '#333' },
-  sliderValue: { fontSize: 15, fontWeight: '700', color: '#34AFA9' },
-  slider: { width: '100%', height: 36, marginBottom: 16 },
-  confirmButton: {
-    backgroundColor: '#34AFA9', borderRadius: 16,
-    paddingVertical: 16, alignItems: 'center',
-    shadowColor: '#34AFA9', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
-  },
-  confirmText: { color: '#fff', fontSize: 17, fontWeight: '700' },
-});
+function createStyles(t) {
+  return StyleSheet.create({
+    container: { flex: 1 },
+    map: { flex: 1 },
+    backButton: {
+      position: 'absolute', left: 16, zIndex: 10,
+      width: 40, height: 40, borderRadius: 20,
+      backgroundColor: t.surface, justifyContent: 'center', alignItems: 'center',
+      shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2, shadowRadius: 4, elevation: 4,
+    },
+    backText: { fontSize: 28, fontWeight: '700', color: t.text, marginTop: -2 },
+    banner: {
+      position: 'absolute', alignSelf: 'center', zIndex: 10,
+      backgroundColor: t.surface, borderRadius: 20,
+      paddingHorizontal: 16, paddingVertical: 8,
+      shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15, shadowRadius: 6, elevation: 4,
+    },
+    bannerText: { fontSize: 14, fontWeight: '600', color: t.text },
+    panel: {
+      backgroundColor: t.surface,
+      paddingHorizontal: 24, paddingTop: 20,
+      borderTopLeftRadius: 24, borderTopRightRadius: 24,
+      shadowColor: '#000', shadowOffset: { width: 0, height: -3 },
+      shadowOpacity: 0.08, shadowRadius: 10, elevation: 10,
+    },
+    sliderRow: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4,
+    },
+    sliderLabel: { fontSize: 15, fontWeight: '700', color: t.text },
+    sliderValue: { fontSize: 15, fontWeight: '700', color: t.accent },
+    slider: { width: '100%', height: 36, marginBottom: 16 },
+    confirmButton: {
+      backgroundColor: t.accent, borderRadius: 16,
+      paddingVertical: 16, alignItems: 'center',
+      shadowColor: t.accent, shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
+    },
+    confirmText: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  });
+}

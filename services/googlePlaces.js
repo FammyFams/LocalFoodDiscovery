@@ -75,13 +75,49 @@ function parseTypes(types = []) {
     .slice(0, 4);
 }
 
-export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles = 1, cuisineTypes = [], noFastFood = false, noConvenienceStore = false }) {
-  const excludedTypes = [
-    ...(noFastFood ? ['fast_food_restaurant'] : []),
-    ...(noConvenienceStore ? ['convenience_store', 'gas_station'] : []),
-  ];
+// When "Any" is selected we fan out across these buckets in parallel so we
+// get a diverse pool instead of Google's generic top-20 "restaurant" list.
+const ANY_CUISINE_BUCKETS = [
+  'american_restaurant',
+  'chinese_restaurant',
+  'italian_restaurant',
+  'mexican_restaurant',
+  'japanese_restaurant',
+  'indian_restaurant',
+  'thai_restaurant',
+  'mediterranean_restaurant',
+  'vietnamese_restaurant',
+  'korean_restaurant',
+];
+
+const FIELD_MASK = [
+  'places.id',
+  'places.displayName',
+  'places.rating',
+  'places.userRatingCount',
+  'places.priceLevel',
+  'places.photos',
+  'places.formattedAddress',
+  'places.location',
+  'places.editorialSummary',
+  'places.regularOpeningHours',
+  'places.nationalPhoneNumber',
+  'places.websiteUri',
+  'places.types',
+  'places.servesBeer',
+  'places.servesWine',
+  'places.servesBrunch',
+  'places.servesBreakfast',
+  'places.servesLunch',
+  'places.servesDinner',
+  'places.takeout',
+  'places.delivery',
+  'places.dineIn',
+].join(',');
+
+async function fetchOneBucket({ latitude, longitude, radiusMiles, includedTypes, excludedTypes }) {
   const body = {
-    includedTypes: cuisineTypes.length > 0 ? cuisineTypes : ['restaurant'],
+    includedTypes,
     ...(excludedTypes.length > 0 && { excludedTypes }),
     maxResultCount: 20,
     locationRestriction: {
@@ -91,48 +127,54 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
       },
     },
   };
-
   const response = await fetch(BASE_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': GOOGLE_API_KEY,
-      'X-Goog-FieldMask': [
-        'places.id',
-        'places.displayName',
-        'places.rating',
-        'places.userRatingCount',
-        'places.priceLevel',
-        'places.photos',
-        'places.formattedAddress',
-        'places.location',
-        'places.editorialSummary',
-        'places.regularOpeningHours',
-        'places.nationalPhoneNumber',
-        'places.websiteUri',
-        'places.types',
-        'places.servesBeer',
-        'places.servesWine',
-        'places.servesBrunch',
-        'places.servesBreakfast',
-        'places.servesLunch',
-        'places.servesDinner',
-        'places.takeout',
-        'places.delivery',
-        'places.dineIn',
-      ].join(','),
+      'X-Goog-FieldMask': FIELD_MASK,
     },
     body: JSON.stringify(body),
   });
+  if (!response.ok) return [];
+  const data = await response.json();
+  return data.places || [];
+}
 
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Google Places error ${response.status}: ${text}`);
+export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles = 1, cuisineTypes = [], noFastFood = false, noConvenienceStore = false }) {
+  const excludedTypes = [
+    ...(noFastFood ? ['fast_food_restaurant'] : []),
+    ...(noConvenienceStore ? ['convenience_store', 'gas_station'] : []),
+  ];
+
+  let rawPlaces;
+  if (cuisineTypes.length === 0) {
+    // Fan out across cuisine buckets in parallel for a diverse "Any" result
+    const results = await Promise.all(
+      ANY_CUISINE_BUCKETS.map((type) =>
+        fetchOneBucket({ latitude, longitude, radiusMiles, includedTypes: [type], excludedTypes })
+      )
+    );
+    // Deduplicate by place ID
+    const seen = new Set();
+    rawPlaces = [];
+    for (const batch of results) {
+      for (const place of batch) {
+        if (!seen.has(place.id)) {
+          seen.add(place.id);
+          rawPlaces.push(place);
+        }
+      }
+    }
+  } else {
+    rawPlaces = await fetchOneBucket({
+      latitude, longitude, radiusMiles,
+      includedTypes: cuisineTypes,
+      excludedTypes,
+    });
   }
 
-  const data = await response.json();
-
-  const filtered = (data.places || []).filter((place) => !isGlobalChain(place.displayName?.text ?? ''));
+  const filtered = rawPlaces.filter((place) => !isGlobalChain(place.displayName?.text ?? ''));
 
   // Shuffle so the order feels random each time
   for (let i = filtered.length - 1; i > 0; i--) {
