@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "FoodTinder",
-    "slug": "food-tinder",
+    "name": "foodFinder",
+    "slug": "food-finder",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

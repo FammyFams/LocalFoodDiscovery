@@ -24,7 +24,7 @@ const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwi
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => isTopRef.current,
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, g) => isTopRef.current && (Math.abs(g.dx) > 5 || Math.abs(g.dy) > 5),
       onPanResponderMove: (_, gesture) => {
         position.setValue({ x: gesture.dx, y: gesture.dy * 0.3 });

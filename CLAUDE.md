@@ -30,7 +30,7 @@ The Google Places API (v1 — New) must have the **Places API (New)** enabled in
 
 ## Architecture
 
-This is a React Native (Expo) app called **FoodTinder** — a Tinder-style restaurant discovery app.
+This is a React Native (Expo) app called **foodFinder** — a Tinder-style restaurant discovery app.
 
 **Navigation structure** (`App.js`):
 - Root: `Stack.Navigator`

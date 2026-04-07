@@ -207,7 +207,7 @@ function removeTopCard(id) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.headerTitle}>FoodTinder 🍽️</Text>
+          <Text style={styles.headerTitle}>foodFinder 🍽️</Text>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.locationButton} onPress={() => setLocationModalVisible(true)}>
               <Text style={styles.locationIcon}>📍</Text>
