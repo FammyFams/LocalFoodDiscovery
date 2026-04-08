@@ -22,8 +22,8 @@ import Slider from '@react-native-community/slider';
 import { useFocusEffect } from '@react-navigation/native';
 import { consumePendingLocation } from '../services/locationBridge';
 import { useRestaurants } from '../context/RestaurantContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
+import { BlurView } from 'expo-blur';
 import { trackEvent } from '../services/analytics';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -130,9 +130,7 @@ export default function MainScreen({ navigation }) {
 
   useEffect(() => {
     requestCurrentLocation();
-    AsyncStorage.getItem('tutorialSeen').then((val) => {
-      if (!val) setShowTutorial(true);
-    });
+    setShowTutorial(true);
   }, []);
 
   // Pick up location (and optional radius) set by MapPickerScreen when this screen regains focus
@@ -723,8 +721,8 @@ export default function MainScreen({ navigation }) {
       </Modal>
 
       {/* First-time tutorial overlay */}
-      {showTutorial && (
-        <View style={styles.tutorialOverlay}>
+      <Modal visible={showTutorial} transparent animationType="fade">
+        <BlurView intensity={30} tint="dark" style={styles.tutorialOverlay}>
           <View style={styles.tutorialContent}>
             <Text style={styles.tutorialEmoji}>🤔</Text>
             <Text style={styles.tutorialTitle}>Don't know where to eat?</Text>
@@ -737,14 +735,13 @@ export default function MainScreen({ navigation }) {
               style={styles.tutorialButton}
               onPress={() => {
                 setShowTutorial(false);
-                AsyncStorage.setItem('tutorialSeen', 'true');
               }}
             >
               <Text style={styles.tutorialButtonText}>Got it!</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      )}
+        </BlurView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1075,15 +1072,14 @@ function createStyles(t) {
     tutorialOverlay: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: t.overlay,
-      justifyContent: 'flex-end',
+      justifyContent: 'center',
       alignItems: 'center',
-      paddingBottom: 120,
       zIndex: 200,
     },
     tutorialContent: { alignItems: 'center', paddingHorizontal: 40 },
     tutorialEmoji: { fontSize: 44, marginBottom: 12 },
     tutorialTitle: {
-      fontSize: 22,
+      fontSize: 38,
       fontWeight: '700',
       color: '#fff',
       textAlign: 'center',
@@ -1091,10 +1087,10 @@ function createStyles(t) {
       letterSpacing: -0.3,
     },
     tutorialText: {
-      fontSize: 15,
+      fontSize: 26,
       color: 'rgba(255,255,255,0.75)',
       textAlign: 'center',
-      lineHeight: 22,
+      lineHeight: 36,
       marginBottom: 16,
     },
     tutorialArrow: { fontSize: 32, color: '#fff', marginBottom: 20 },
