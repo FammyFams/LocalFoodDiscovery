@@ -23,7 +23,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#212529"
       },
-      "package": "com.foodfinder.app",
+      "package": "com.mesohungry.app",
       "versionCode": 1,
       "permissions": [
         "ACCESS_FINE_LOCATION",
