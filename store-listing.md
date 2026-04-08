@@ -1,15 +1,15 @@
 # Google Play Store Listing
 
 ## App Name
-foodFinder
+mesoHungry
 
 ## Short Description (80 chars max)
 Swipe to discover restaurants nearby. Like, compare, and pick where to eat.
 
 ## Full Description (4000 chars max)
-Can't decide where to eat? foodFinder makes it easy.
+Can't decide where to eat? mesoHungry makes it easy.
 
-Swipe through nearby restaurants like a dating app — swipe right to save places you like, swipe left to skip. When you've saved enough, foodFinder helps you pick the perfect spot.
+Swipe through nearby restaurants like a dating app — swipe right to save places you like, swipe left to skip. When you've saved enough, mesoHungry helps you pick the perfect spot.
 
 HOW IT WORKS
 - Open the app and let it find restaurants near you
@@ -30,7 +30,7 @@ FEATURES
 - No account required — fully private
 
 PRIVACY FIRST
-foodFinder does not require an account. Your liked restaurants are stored only on your device. We use anonymous analytics to improve the app and never sell your data.
+mesoHungry does not require an account. Your liked restaurants are stored only on your device. We use anonymous analytics to improve the app and never sell your data.
 
 Powered by Google Places.
 
