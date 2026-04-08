@@ -31,11 +31,15 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # API keys — do not commit
 config.js
 .claude/
+
+# Google Play service account key
+google-service-account.json
 
 # typescript
 *.tsbuildinfo

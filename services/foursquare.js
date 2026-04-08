@@ -1,4 +1,4 @@
-import { FOURSQUARE_API_KEY } from '../config';
+import { FOURSQUARE_API_KEY } from '../env';
 
 const BASE_URL = 'https://api.foursquare.com/v3/places/search';
 const FOOD_CATEGORY = '13000';

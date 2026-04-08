@@ -1,4 +1,4 @@
-import { YELP_API_KEY } from '../config';
+import { YELP_API_KEY } from '../env';
 
 const BASE_URL = 'https://api.yelp.com/v3/businesses/search';
 

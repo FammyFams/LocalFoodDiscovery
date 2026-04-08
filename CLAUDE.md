@@ -18,13 +18,14 @@ There are no tests or linting scripts configured.
 
 ## API Key Setup
 
+The app reads API keys from `EXPO_PUBLIC_` environment variables via `env.js`. For local dev, create a `.env` file (gitignored):
 
-The app requires a `config.js` file in the project root (gitignored). Create it before running:
-
-```js
-// config.js
-export const GOOGLE_API_KEY = 'your-google-places-api-key';
 ```
+EXPO_PUBLIC_GOOGLE_API_KEY=your-google-places-api-key
+EXPO_PUBLIC_POSTHOG_API_KEY=your-posthog-api-key
+```
+
+For EAS builds, these are set as project secrets on Expo.
 
 The Google Places API (v1 — New) must have the **Places API (New)** enabled in Google Cloud Console.
 
