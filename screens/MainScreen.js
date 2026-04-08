@@ -34,6 +34,8 @@ const RADIUS_MAX = 5;
 
 const CUISINE_OPTIONS = [
   { label: 'Any', type: null, emoji: '🍽️' },
+  { label: 'Bar & Pub', type: 'bar', emoji: '🍺' },
+  { label: 'Fast Food', type: 'fast_food_restaurant', emoji: '🍟' },
   { label: 'American', type: 'american_restaurant', emoji: '🍔' },
   { label: 'Chinese', type: 'chinese_restaurant', emoji: '🥡' },
   { label: 'French', type: 'french_restaurant', emoji: '🥐' },
@@ -70,8 +72,9 @@ export default function MainScreen({ navigation }) {
   const [sliderRadius, setSliderRadius] = useState(1);
   const radiusTimeout = useRef(null);
   const [cuisineTypes, setCuisineTypes] = useState([]);
-  const [noFastFood, setNoFastFood] = useState(true);
-  const [noConvenienceStore, setNoConvenienceStore] = useState(true);
+  const [noFastFood, setNoFastFood] = useState(false);
+  const [noConvenienceStore, setNoConvenienceStore] = useState(false);
+  const [fetchKey, setFetchKey] = useState(0);
   const [cuisineModalVisible, setCuisineModalVisible] = useState(false);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -90,27 +93,27 @@ export default function MainScreen({ navigation }) {
       'This will clear all your liked and passed restaurants.',
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: () => {
-            clearAll();
-            setRestaurants([]);
-            if (location)
-              loadRestaurants(
-                location,
-                radius,
-                cuisineTypes,
-                noFastFood,
-                noConvenienceStore,
-              );
-          },
-        },
-      ],
+        { text: 'Reset', style: 'destructive', onPress: () => { clearAll(); setRestaurants([]); setFetchKey((k) => k + 1); } },
+      ]
     );
   }
   const isFetching = useRef(false);
+  const offsetIndex = useRef(0);
+  const seenIds = useRef(new Set());
   const topCardRef = useRef(null);
+
+  // Systematic offsets (~900m each direction) so re-fetches cover new ground
+  const FETCH_OFFSETS = [
+    { lat: 0,      lng: 0      }, // center
+    { lat: 0.008,  lng: 0      }, // N
+    { lat: -0.008, lng: 0      }, // S
+    { lat: 0,      lng: 0.008  }, // E
+    { lat: 0,      lng: -0.008 }, // W
+    { lat: 0.006,  lng: 0.006  }, // NE
+    { lat: -0.006, lng: 0.006  }, // SE
+    { lat: -0.006, lng: -0.006 }, // SW
+    { lat: 0.006,  lng: -0.006 }, // NW
+  ];
   const [decisionPrompt, setDecisionPrompt] = useState(false);
   const prevLikedCount = useRef(0);
   const likeScale = useRef(new Animated.Value(1)).current;
@@ -168,7 +171,7 @@ export default function MainScreen({ navigation }) {
         noConvenienceStore,
       );
     }
-  }, [location, radius, cuisineTypes, noFastFood, noConvenienceStore]);
+  }, [location, radius, cuisineTypes, noFastFood, noConvenienceStore, fetchKey]);
 
   // ── Location helpers ──────────────────────────────────────────
 
@@ -197,27 +200,37 @@ export default function MainScreen({ navigation }) {
 
   // ── Restaurant loading ────────────────────────────────────────
 
-  async function loadRestaurants(
-    loc,
-    rad,
-    cuisines,
-    excludeFastFood = false,
-    excludeConvenience = false,
-  ) {
+  async function loadRestaurants(loc, rad, cuisines, excludeFastFood = false, excludeConvenience = false, append = false) {
     if (isFetching.current) return;
     isFetching.current = true;
+    if (!append) {
+      offsetIndex.current = 0;
+      seenIds.current = new Set();
+    }
     setLoading(true);
     setError(null);
     try {
+      const offset = FETCH_OFFSETS[offsetIndex.current % FETCH_OFFSETS.length];
+      offsetIndex.current += 1;
+
       const results = await fetchNearbyRestaurants({
-        latitude: loc.latitude,
-        longitude: loc.longitude,
+        latitude: loc.latitude + offset.lat,
+        longitude: loc.longitude + offset.lng,
         radiusMiles: rad,
         cuisineTypes: cuisines,
         noFastFood: excludeFastFood,
         noConvenienceStore: excludeConvenience,
       });
-      setRestaurants(results);
+
+      // Only keep places we haven't shown before
+      const fresh = results.filter((r) => !seenIds.current.has(r.id));
+      fresh.forEach((r) => seenIds.current.add(r.id));
+
+      if (append) {
+        setRestaurants((prev) => [...prev, ...fresh]);
+      } else {
+        setRestaurants(fresh);
+      }
     } catch (e) {
       setError(`Failed to load restaurants: ${e.message}`);
     } finally {
@@ -252,14 +265,8 @@ export default function MainScreen({ navigation }) {
   function removeTopCard(id) {
     setRestaurants((prev) => {
       const remaining = prev.filter((r) => r.id !== id);
-      if (remaining.length < 5 && location && !isFetching.current) {
-        loadRestaurants(
-          location,
-          radius,
-          cuisineTypes,
-          noFastFood,
-          noConvenienceStore,
-        );
+      if (remaining.length < 8 && location && !isFetching.current) {
+        loadRestaurants(location, radius, cuisineTypes, noFastFood, noConvenienceStore, true);
       }
       return remaining;
     });
@@ -353,7 +360,7 @@ export default function MainScreen({ navigation }) {
               value={sliderRadius}
               step={0.5}
               minimumTrackTintColor={t.accent}
-              maximumTrackTintColor='#ddd'
+              maximumTrackTintColor={t.border}
               thumbTintColor={t.accent}
               onValueChange={(val) => {
                 setSliderRadius(val);

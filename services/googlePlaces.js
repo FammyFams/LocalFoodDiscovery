@@ -174,7 +174,14 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
     });
   }
 
-  const filtered = rawPlaces.filter((place) => !isGlobalChain(place.displayName?.text ?? ''));
+  const HOTEL_TYPES = new Set(['hotel', 'motel', 'lodging', 'extended_stay_hotel', 'resort_hotel', 'bed_and_breakfast', 'hostel', 'inn']);
+
+  const filtered = rawPlaces.filter((place) => {
+    if (isGlobalChain(place.displayName?.text ?? '')) return false;
+    if (place.regularOpeningHours?.openNow === false) return false;
+    if (place.types?.some((t) => HOTEL_TYPES.has(t))) return false;
+    return true;
+  });
 
   // Shuffle so the order feels random each time
   for (let i = filtered.length - 1; i > 0; i--) {

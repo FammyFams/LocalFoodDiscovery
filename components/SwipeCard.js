@@ -23,10 +23,9 @@ function getNextOpenTime(hours) {
   const match = todayEntry.match(/:\s*(\d{1,2}:\d{2}\s*[AP]M)/i);
   return match ? match[1].trim() : null;
 }
-const CARD_WIDTH = Math.min(SCREEN_WIDTH - 24, 420);
-// Subtract header (~100), action buttons (~70), tab bar (~90) from screen height
-const CARD_HEIGHT = SCREEN_HEIGHT - 310;
-const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.22;
+const CARD_WIDTH = Math.min(SCREEN_WIDTH - 32, 420);
+const CARD_HEIGHT = Math.min(SCREEN_HEIGHT * 0.62, 520);
+const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.12;
 const SWIPE_OUT_DURATION = 300;
 
 const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwipeRight, onPress, isTop, index }, ref) {
