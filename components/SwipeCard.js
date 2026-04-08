@@ -178,7 +178,7 @@ const SwipeCard = forwardRef(function SwipeCard({ restaurant, onSwipeLeft, onSwi
 
 export default SwipeCard;
 
-const BORDER_RADIUS = 18;
+const BORDER_RADIUS = 24;
 const GLOW_SPREAD = 3;
 
 function createStyles(t) {
@@ -251,22 +251,22 @@ function createStyles(t) {
       transform: [{ rotate: '22deg' }],
     },
     likeStampText: {
-      fontSize: 22, fontWeight: '800', color: t.green, letterSpacing: 2,
+      fontSize: 22, fontFamily: 'Lora_700Bold', color: t.green, letterSpacing: 2,
     },
     nopeStampText: {
-      fontSize: 22, fontWeight: '800', color: t.red, letterSpacing: 2,
+      fontSize: 22, fontFamily: 'Lora_700Bold', color: t.red, letterSpacing: 2,
     },
     infoOverlay: {
       position: 'absolute', bottom: 0, left: 0, right: 0,
       paddingHorizontal: 18, paddingTop: 14, paddingBottom: 18,
       backgroundColor: t.card,
-      borderTopLeftRadius: 18, borderTopRightRadius: 18,
+      borderTopLeftRadius: 24, borderTopRightRadius: 24,
       zIndex: 3,
     },
-    name: { fontSize: 20, fontWeight: '700', color: t.text, marginBottom: 4, letterSpacing: -0.3 },
+    name: { fontSize: 20, fontFamily: 'Lora_700Bold', color: t.text, marginBottom: 4, letterSpacing: -0.3 },
     metaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },
-    metaText: { fontSize: 13, color: t.textSecondary, fontWeight: '500' },
-    cuisine: { fontSize: 12, color: t.textTertiary, marginBottom: 2 },
-    address: { fontSize: 12, color: t.textQuaternary },
+    metaText: { fontSize: 13, color: t.textSecondary, fontFamily: 'Raleway_500Medium' },
+    cuisine: { fontSize: 12, color: t.textTertiary, fontFamily: 'Raleway_400Regular', marginBottom: 2 },
+    address: { fontSize: 12, color: t.textQuaternary, fontFamily: 'Raleway_400Regular' },
   });
 }

@@ -767,7 +767,7 @@ function createStyles(t) {
     },
     headerTitle: {
       fontSize: COMPACT_HEADER ? 20 : 24,
-      fontWeight: '700',
+      fontFamily: 'Lora_700Bold',
       color: t.text,
       letterSpacing: -0.5,
     },
@@ -791,7 +791,7 @@ function createStyles(t) {
     },
     resetButtonText: { fontSize: 14, color: '#fff', fontWeight: '700' },
     locationIcon: { fontSize: 12 },
-    locationLabel: { fontSize: 13, fontWeight: '500', color: t.textSecondary },
+    locationLabel: { fontSize: 13, fontFamily: 'Raleway_500Medium', color: t.textSecondary },
     locationChevron: { fontSize: 10, color: t.textTertiary },
     locationDropdown: {
       position: 'absolute',
@@ -799,12 +799,12 @@ function createStyles(t) {
       right: 0,
       marginTop: 4,
       backgroundColor: t.surface,
-      borderRadius: 14,
+      borderRadius: 20,
       width: 210,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 12 },
-      shadowOpacity: 0.1,
-      shadowRadius: 24,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.08,
+      shadowRadius: 32,
       elevation: 8,
       zIndex: 100,
       overflow: 'hidden',
@@ -817,7 +817,7 @@ function createStyles(t) {
       paddingVertical: 1,
     },
     dropdownIcon: { fontSize: 16 },
-    dropdownText: { fontSize: 15, fontWeight: '400', color: t.text },
+    dropdownText: { fontSize: 15, fontFamily: 'Raleway_400Regular', color: t.text },
     dropdownDivider: {
       height: 0.5,
       backgroundColor: t.separator,
@@ -828,7 +828,7 @@ function createStyles(t) {
     slider: { flex: 1, height: 36 },
     sliderLabel: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: 'Raleway_600SemiBold',
       color: t.text,
       minWidth: 42,
     },
@@ -846,7 +846,7 @@ function createStyles(t) {
       paddingVertical: 8,
       paddingHorizontal: 4,
     },
-    filterToggleLabel: { fontSize: 14, fontWeight: '500', color: t.text },
+    filterToggleLabel: { fontSize: 14, fontFamily: 'Raleway_500Medium', color: t.text },
     cuisineChip: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -859,26 +859,26 @@ function createStyles(t) {
     cuisineChipActive: { backgroundColor: t.chipActive },
     cuisineChipText: {
       fontSize: 13,
-      fontWeight: '500',
+      fontFamily: 'Raleway_500Medium',
       color: t.chipInactiveText,
     },
     cuisineChevron: { fontSize: 10, color: t.textTertiary },
     cuisineSheet: { maxHeight: '75%', paddingBottom: 20 },
     cuisineDoneButton: {
       backgroundColor: t.accent,
-      borderRadius: 14,
+      borderRadius: 24,
       paddingVertical: 14,
       alignItems: 'center',
       marginTop: 8,
       marginBottom: 8,
     },
-    cuisineDoneText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+    cuisineDoneText: { color: '#fff', fontFamily: 'Raleway_600SemiBold', fontSize: 16 },
     cuisineGrid: { justifyContent: 'space-between', marginBottom: 10 },
     cuisineOption: {
       flex: 1,
       marginHorizontal: 3,
       paddingVertical: 12,
-      borderRadius: 14,
+      borderRadius: 20,
       backgroundColor: t.chipInactive,
       alignItems: 'center',
       justifyContent: 'center',
@@ -887,7 +887,7 @@ function createStyles(t) {
     cuisineOptionEmoji: { fontSize: 24, marginBottom: 4 },
     cuisineOptionLabel: {
       fontSize: 11,
-      fontWeight: '500',
+      fontFamily: 'Raleway_500Medium',
       color: t.chipInactiveText,
       textAlign: 'center',
     },
@@ -907,7 +907,7 @@ function createStyles(t) {
     },
     emptyTitle: {
       fontSize: 20,
-      fontWeight: '700',
+      fontFamily: 'Lora_700Bold',
       color: t.text,
       textAlign: 'center',
       marginBottom: 6,
@@ -923,7 +923,7 @@ function createStyles(t) {
       alignItems: 'center',
       gap: 12,
       backgroundColor: t.card,
-      borderRadius: 14,
+      borderRadius: 20,
       padding: 14,
       marginBottom: 8,
       width: '100%',
@@ -932,7 +932,7 @@ function createStyles(t) {
     emptyActionText: { flex: 1 },
     emptyActionTitle: {
       fontSize: 15,
-      fontWeight: '600',
+      fontFamily: 'Raleway_600SemiBold',
       color: t.text,
       marginBottom: 2,
     },
@@ -944,7 +944,7 @@ function createStyles(t) {
       paddingVertical: 12,
       borderRadius: 22,
     },
-    retryText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+    retryText: { color: '#fff', fontFamily: 'Raleway_600SemiBold', fontSize: 16 },
 
     // Action buttons
     actionRow: {
@@ -964,9 +964,9 @@ function createStyles(t) {
       alignItems: 'center',
       backgroundColor: t.card,
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.06,
-      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 16,
       elevation: 2,
     },
     nopeButton: {
@@ -989,8 +989,8 @@ function createStyles(t) {
     },
     modalSheet: {
       backgroundColor: t.surface,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
       paddingHorizontal: 16,
       paddingBottom: 40,
       maxHeight: '80%',
@@ -1006,7 +1006,7 @@ function createStyles(t) {
     },
     modalTitle: {
       fontSize: 20,
-      fontWeight: '700',
+      fontFamily: 'Lora_700Bold',
       color: t.text,
       marginBottom: 14,
       letterSpacing: -0.3,
@@ -1021,7 +1021,7 @@ function createStyles(t) {
     },
     decisionSheet: {
       backgroundColor: t.card,
-      borderRadius: 20,
+      borderRadius: 24,
       padding: 24,
       width: '100%',
       alignItems: 'center',
@@ -1029,7 +1029,7 @@ function createStyles(t) {
     decisionEmoji: { fontSize: 44, marginBottom: 12 },
     decisionTitle: {
       fontSize: 20,
-      fontWeight: '700',
+      fontFamily: 'Lora_700Bold',
       color: t.text,
       textAlign: 'center',
       marginBottom: 8,
@@ -1044,7 +1044,7 @@ function createStyles(t) {
     },
     previewRow: { marginBottom: 20, alignSelf: 'stretch' },
     previewItem: { alignItems: 'center', marginRight: 12, width: 68 },
-    previewImage: { width: 68, height: 68, borderRadius: 12, marginBottom: 4 },
+    previewImage: { width: 68, height: 68, borderRadius: 20, marginBottom: 4 },
     previewPlaceholder: {
       backgroundColor: t.inputBg,
       justifyContent: 'center',
@@ -1053,14 +1053,14 @@ function createStyles(t) {
     previewName: { fontSize: 11, color: t.textTertiary, textAlign: 'center' },
     decisionGoButton: {
       backgroundColor: t.accent,
-      borderRadius: 14,
+      borderRadius: 24,
       paddingVertical: 14,
       paddingHorizontal: 32,
       width: '100%',
       alignItems: 'center',
       marginBottom: 10,
     },
-    decisionGoText: { color: '#fff', fontWeight: '600', fontSize: 16 },
+    decisionGoText: { color: '#fff', fontFamily: 'Raleway_600SemiBold', fontSize: 16 },
     decisionDismiss: { paddingVertical: 8 },
     decisionDismissText: {
       color: t.textTertiary,
@@ -1080,7 +1080,7 @@ function createStyles(t) {
     tutorialEmoji: { fontSize: 44, marginBottom: 12 },
     tutorialTitle: {
       fontSize: 38,
-      fontWeight: '700',
+      fontFamily: 'Lora_700Bold',
       color: '#fff',
       textAlign: 'center',
       marginBottom: 10,
@@ -1088,6 +1088,7 @@ function createStyles(t) {
     },
     tutorialText: {
       fontSize: 26,
+      fontFamily: 'Raleway_400Regular',
       color: 'rgba(255,255,255,0.75)',
       textAlign: 'center',
       lineHeight: 36,
@@ -1096,10 +1097,10 @@ function createStyles(t) {
     tutorialArrow: { fontSize: 32, color: '#fff', marginBottom: 20 },
     tutorialButton: {
       backgroundColor: '#ffffff',
-      borderRadius: 14,
+      borderRadius: 24,
       paddingVertical: 14,
       paddingHorizontal: 48,
     },
-    tutorialButtonText: { color: t.text, fontWeight: '600', fontSize: 17 },
+    tutorialButtonText: { color: t.text, fontFamily: 'Raleway_600SemiBold', fontSize: 17 },
   });
 }

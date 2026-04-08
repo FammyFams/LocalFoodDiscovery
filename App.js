@@ -3,8 +3,11 @@ import React, { useEffect } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, Platform, AppState } from 'react-native';
+import { Text, Platform, AppState, View, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
+import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
+import { Raleway_400Regular, Raleway_500Medium, Raleway_600SemiBold, Raleway_700Bold } from '@expo-google-fonts/raleway';
 import { initAnalytics, trackEvent } from './services/analytics';
 
 import { RestaurantProvider } from './context/RestaurantContext';
@@ -41,7 +44,7 @@ function TabNavigator() {
         },
         tabBarActiveTintColor: t.accent,
         tabBarInactiveTintColor: t.textTertiary,
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '500', marginBottom: Platform.OS === 'ios' ? 0 : 4 },
+        tabBarLabelStyle: { fontSize: 10, fontFamily: 'Raleway_500Medium', marginBottom: Platform.OS === 'ios' ? 0 : 4 },
         headerShown: false,
       }}
     >
@@ -62,7 +65,7 @@ function TabNavigator() {
           headerLargeTitle: true,
           headerStyle: { backgroundColor: t.bg },
           headerShadowVisible: false,
-          headerTitleStyle: { fontWeight: '700', fontSize: 17, color: t.text },
+          headerTitleStyle: { fontFamily: 'Lora_700Bold', fontSize: 17, color: t.text },
         }}
       />
       <Tab.Screen
@@ -75,7 +78,7 @@ function TabNavigator() {
           headerLargeTitle: true,
           headerStyle: { backgroundColor: t.bg },
           headerShadowVisible: false,
-          headerTitleStyle: { fontWeight: '700', fontSize: 17, color: t.text },
+          headerTitleStyle: { fontFamily: 'Lora_700Bold', fontSize: 17, color: t.text },
         }}
       />
       <Tab.Screen
@@ -88,7 +91,7 @@ function TabNavigator() {
           headerLargeTitle: true,
           headerStyle: { backgroundColor: t.bg },
           headerShadowVisible: false,
-          headerTitleStyle: { fontWeight: '700', fontSize: 17, color: t.text },
+          headerTitleStyle: { fontFamily: 'Lora_700Bold', fontSize: 17, color: t.text },
         }}
       />
     </Tab.Navigator>
@@ -137,7 +140,7 @@ function AppContent() {
             headerBackTitle: 'Back',
             headerStyle: { backgroundColor: t.bg },
             headerShadowVisible: false,
-            headerTitleStyle: { fontWeight: '600', fontSize: 17, color: t.text },
+            headerTitleStyle: { fontFamily: 'Lora_600SemiBold', fontSize: 17, color: t.text },
             headerTintColor: t.accent,
           }}
         />
@@ -153,6 +156,24 @@ function AppContent() {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Lora_400Regular,
+    Lora_600SemiBold,
+    Lora_700Bold,
+    Raleway_400Regular,
+    Raleway_500Medium,
+    Raleway_600SemiBold,
+    Raleway_700Bold,
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5DC' }}>
+        <ActivityIndicator size="large" color="#228B22" />
+      </View>
+    );
+  }
+
   return (
     <SettingsProvider>
     <ThemeProvider>
