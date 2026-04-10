@@ -34,8 +34,20 @@ export default function LikedScreen({ navigation }) {
 
   // TODO: Remove this button or keep it — experimental export feature
   function exportToGoogleMaps() {
-    const query = likedRestaurants.map((r) => r.name + ', ' + r.address).join(' | ');
-    Linking.openURL(`https://www.google.com/maps/search/${encodeURIComponent(query)}`);
+    // Google Maps search URLs have a length limit, so open each as a saved place list
+    // Use the "dir" endpoint with waypoints (max ~25) for best coverage
+    if (likedRestaurants.length === 0) return;
+    if (likedRestaurants.length === 1) {
+      const r = likedRestaurants[0];
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.name + ', ' + r.address)}`);
+      return;
+    }
+    const places = likedRestaurants.slice(0, 25);
+    const origin = encodeURIComponent(places[0].name + ', ' + places[0].address);
+    const destination = encodeURIComponent(places[places.length - 1].name + ', ' + places[places.length - 1].address);
+    const waypoints = places.slice(1, -1).map((r) => encodeURIComponent(r.name + ', ' + r.address)).join('|');
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? '&waypoints=' + waypoints : ''}`;
+    Linking.openURL(url);
   }
 
   return (

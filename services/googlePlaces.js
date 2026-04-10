@@ -1,6 +1,4 @@
-import { GOOGLE_API_KEY } from '../env';
-
-const BASE_URL = 'https://places.googleapis.com/v1/places:searchNearby';
+import { PLACES_PROXY_URL } from '../env';
 
 const MAX_RADIUS_MILES = 31; // Google Places API cap (~50km)
 
@@ -8,8 +6,10 @@ function milesToMeters(miles) {
   return Math.round(Math.min(miles, MAX_RADIUS_MILES) * 1609.34);
 }
 
-function getPhotoUrl(photoName) {
-  return `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=800&key=${GOOGLE_API_KEY}`;
+// Photos load via the proxy's /photo endpoint, which 302-redirects to a
+// signed Google CDN URL. The Google API key never touches the client.
+export function getPhotoUrl(photoName) {
+  return `${PLACES_PROXY_URL}/photo?name=${encodeURIComponent(photoName)}&maxHeightPx=800`;
 }
 
 function parsePriceLevel(level) {
@@ -23,49 +23,6 @@ function parsePriceLevel(level) {
   return map[level] ?? 1;
 }
 
-// Known global/national chains that slip through the API type filter.
-// Checked as a substring of the lowercased place name so "McDonald's Express" is also caught.
-const CHAIN_PATTERNS = [
-  // Burgers / fast food
-  "mcdonald", "burger king", "wendy's", "wendys", "jack in the box",
-  "five guys", "in-n-out", "culver's",
-  "dairy queen", "hardee's", "carl's jr", "fatburger",
-  "habit burger", "sonic drive", "steak 'n shake",
-  // Chicken
-  "kfc", "popeyes", "chick-fil-a", "raising cane", "zaxby's", "wingstop",
-  "wing stop", "buffalo wild wings",
-  // Pizza
-  "pizza hut", "domino's", "little caesars", "papa john", "papa murphy",
-  "mod pizza", "blaze pizza",
-  // Mexican fast food
-  "taco bell", "del taco", "qdoba", "moe's southwest",
-  // Subs / sandwiches
-  "subway", "jersey mike", "jimmy john", "firehouse subs", "quiznos",
-  "blimpie", "jason's deli",
-  // Casual dining chains
-  "applebee's", "chili's", "olive garden", "red lobster", "tgi friday",
-  "outback steakhouse", "longhorn steakhouse", "texas roadhouse",
-  "cracker barrel", "golden corral", "ruby tuesday", "red robin",
-  "bob evans", "perkins restaurant",
-  // Breakfast chains
-  "ihop", "denny's", "waffle house",
-  // Asian fast casual
-  "panda express",
-  // Burritos / bowls
-  "chipotle",
-  // Noodles / other
-  "noodles & company", "panera", "boston market", "el pollo loco",
-  // Coffee (when they show up as food)
-  "starbucks", "dunkin'", "dunkin donuts", "tim hortons", "dutch bros",
-  // Convenience / gas station food
-  "7-eleven", "7 eleven", "circle k", "wawa", "sheetz", "quiktrip",
-  "casey's general",
-];
-
-function isGlobalChain(name) {
-  const lower = name.toLowerCase();
-  return CHAIN_PATTERNS.some((pattern) => lower.includes(pattern));
-}
 
 function parseTypes(types = []) {
   const skip = new Set(['restaurant', 'food', 'point_of_interest', 'establishment', 'store']);
@@ -75,20 +32,6 @@ function parseTypes(types = []) {
     .slice(0, 4);
 }
 
-// When "Any" is selected we fan out across these buckets in parallel so we
-// get a diverse pool instead of Google's generic top-20 "restaurant" list.
-const ANY_CUISINE_BUCKETS = [
-  'american_restaurant',
-  'chinese_restaurant',
-  'italian_restaurant',
-  'mexican_restaurant',
-  'japanese_restaurant',
-  'indian_restaurant',
-  'thai_restaurant',
-  'mediterranean_restaurant',
-  'vietnamese_restaurant',
-  'korean_restaurant',
-];
 
 const FIELD_MASK = [
   'places.id',
@@ -127,14 +70,10 @@ async function fetchOneBucket({ latitude, longitude, radiusMiles, includedTypes,
       },
     },
   };
-  const response = await fetch(BASE_URL, {
+  const response = await fetch(`${PLACES_PROXY_URL}/search`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': GOOGLE_API_KEY,
-      'X-Goog-FieldMask': FIELD_MASK,
-    },
-    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ body, fieldMask: FIELD_MASK }),
   });
   if (!response.ok) return [];
   const data = await response.json();
@@ -149,23 +88,11 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
 
   let rawPlaces;
   if (cuisineTypes.length === 0) {
-    // Fan out across cuisine buckets in parallel for a diverse "Any" result
-    const results = await Promise.all(
-      ANY_CUISINE_BUCKETS.map((type) =>
-        fetchOneBucket({ latitude, longitude, radiusMiles, includedTypes: [type], excludedTypes })
-      )
-    );
-    // Deduplicate by place ID
-    const seen = new Set();
-    rawPlaces = [];
-    for (const batch of results) {
-      for (const place of batch) {
-        if (!seen.has(place.id)) {
-          seen.add(place.id);
-          rawPlaces.push(place);
-        }
-      }
-    }
+    rawPlaces = await fetchOneBucket({
+      latitude, longitude, radiusMiles,
+      includedTypes: ['food'],
+      excludedTypes,
+    });
   } else {
     rawPlaces = await fetchOneBucket({
       latitude, longitude, radiusMiles,
@@ -177,24 +104,31 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
   const HOTEL_TYPES = new Set(['hotel', 'motel', 'lodging', 'extended_stay_hotel', 'resort_hotel', 'bed_and_breakfast', 'hostel', 'inn']);
 
   const filtered = rawPlaces.filter((place) => {
-    if (isGlobalChain(place.displayName?.text ?? '')) return false;
-    if (place.regularOpeningHours?.openNow === false) return false;
     if (place.types?.some((t) => HOTEL_TYPES.has(t))) return false;
     return true;
   });
 
-  // Shuffle so the order feels random each time
-  for (let i = filtered.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
-  }
+  // Partition into open and closed, shuffle each group, then concat
+  // so closed restaurants appear at the back instead of being discarded
+  const open = filtered.filter((p) => p.regularOpeningHours?.openNow !== false);
+  const closed = filtered.filter((p) => p.regularOpeningHours?.openNow === false);
 
-  return filtered.map((place) => ({
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+  const shuffled = [...shuffle(open), ...shuffle(closed)];
+
+  return shuffled.map((place) => ({
     id: place.id,
     name: place.displayName?.text ?? 'Unknown',
     distance: null,
     priceLevel: parsePriceLevel(place.priceLevel),
-    images: (place.photos || []).slice(0, 8).map((p) => getPhotoUrl(p.name)),
+    images: (place.photos || []).slice(0, 1).map((p) => getPhotoUrl(p.name)),
+    allPhotoRefs: (place.photos || []).slice(0, 3).map((p) => p.name),
     address: place.formattedAddress ?? 'Address unavailable',
     rating: place.rating ? place.rating.toFixed(1) : null,
     userRatingsTotal: place.userRatingCount ?? null,

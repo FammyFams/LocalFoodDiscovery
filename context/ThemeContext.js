@@ -29,13 +29,13 @@ const light = {
 };
 
 const dark = {
-  bg: '#1C1A14',
+  bg: '#2A2620',
   surface: '#2A2620',
   card: '#2A2620',
   text: '#F0EBE0',
-  textSecondary: '#C8BFA8',
-  textTertiary: '#8B7D6B',
-  textQuaternary: '#5C5040',
+  textSecondary: '#DDD5C2',
+  textTertiary: '#C8BFA8',
+  textQuaternary: '#B0A690',
   separator: '#3A3428',
   border: '#443D30',
   accent: '#34A853',

@@ -102,17 +102,37 @@ export default function MainScreen({ navigation }) {
   const seenIds = useRef(new Set());
   const topCardRef = useRef(null);
 
-  // Systematic offsets (~900m each direction) so re-fetches cover new ground
+
+  // Systematic offsets so re-fetches cover new ground (3 rings)
   const FETCH_OFFSETS = [
     { lat: 0,      lng: 0      }, // center
-    { lat: 0.008,  lng: 0      }, // N
-    { lat: -0.008, lng: 0      }, // S
-    { lat: 0,      lng: 0.008  }, // E
-    { lat: 0,      lng: -0.008 }, // W
-    { lat: 0.006,  lng: 0.006  }, // NE
-    { lat: -0.006, lng: 0.006  }, // SE
-    { lat: -0.006, lng: -0.006 }, // SW
-    { lat: 0.006,  lng: -0.006 }, // NW
+    // Inner ring ~900m
+    { lat: 0.008,  lng: 0      },
+    { lat: -0.008, lng: 0      },
+    { lat: 0,      lng: 0.008  },
+    { lat: 0,      lng: -0.008 },
+    { lat: 0.006,  lng: 0.006  },
+    { lat: -0.006, lng: 0.006  },
+    { lat: -0.006, lng: -0.006 },
+    { lat: 0.006,  lng: -0.006 },
+    // Outer ring ~1.8km
+    { lat: 0.016,  lng: 0      },
+    { lat: -0.016, lng: 0      },
+    { lat: 0,      lng: 0.016  },
+    { lat: 0,      lng: -0.016 },
+    { lat: 0.012,  lng: 0.012  },
+    { lat: -0.012, lng: 0.012  },
+    { lat: -0.012, lng: -0.012 },
+    { lat: 0.012,  lng: -0.012 },
+    // Far ring ~2.7km
+    { lat: 0.024,  lng: 0      },
+    { lat: -0.024, lng: 0      },
+    { lat: 0,      lng: 0.024  },
+    { lat: 0,      lng: -0.024 },
+    { lat: 0.018,  lng: 0.018  },
+    { lat: -0.018, lng: 0.018  },
+    { lat: -0.018, lng: -0.018 },
+    { lat: 0.018,  lng: -0.018 },
   ];
   const [decisionPrompt, setDecisionPrompt] = useState(false);
   const prevLikedCount = useRef(0);
@@ -186,6 +206,7 @@ export default function MainScreen({ navigation }) {
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
+      console.log('GPS coords:', loc.coords.latitude, loc.coords.longitude);
       setLocation(loc.coords);
       setLocationLabel('Current Location');
     } catch (e) {
@@ -206,8 +227,8 @@ export default function MainScreen({ navigation }) {
     if (!append) {
       offsetIndex.current = 0;
       seenIds.current = new Set();
+      setLoading(true);
     }
-    setLoading(true);
     setError(null);
     try {
       const offset = FETCH_OFFSETS[offsetIndex.current % FETCH_OFFSETS.length];
@@ -221,6 +242,7 @@ export default function MainScreen({ navigation }) {
         noFastFood: excludeFastFood,
         noConvenienceStore: excludeConvenience,
       });
+      console.log('Fetch returned:', results.length, 'restaurants');
 
       // Only keep places we haven't shown before
       const fresh = results.filter((r) => !seenIds.current.has(r.id));
@@ -234,7 +256,7 @@ export default function MainScreen({ navigation }) {
     } catch (e) {
       setError(`Failed to load restaurants: ${e.message}`);
     } finally {
-      setLoading(false);
+      if (!append) setLoading(false);
       isFetching.current = false;
     }
   }
@@ -265,7 +287,13 @@ export default function MainScreen({ navigation }) {
   function removeTopCard(id) {
     setRestaurants((prev) => {
       const remaining = prev.filter((r) => r.id !== id);
-      if (remaining.length < 8 && location && !isFetching.current) {
+      // Check pending (unswiped) count, not raw count
+      const acted = new Set([
+        ...likedRestaurants.map((r) => r.id),
+        ...notNowRestaurants.map((r) => r.id),
+      ]);
+      const pending = remaining.filter((r) => !acted.has(r.id));
+      if (pending.length < 5 && location && !isFetching.current) {
         loadRestaurants(location, radius, cuisineTypes, noFastFood, noConvenienceStore, true);
       }
       return remaining;
@@ -281,12 +309,28 @@ export default function MainScreen({ navigation }) {
   const pendingRestaurants = restaurants.filter((r) => !actedIds.has(r.id));
   const visibleCards = pendingRestaurants.slice(0, 3);
 
+  // Auto-retry when the queue empties — there may be more results from
+  // the next offset / cuisine bucket that haven't been tried yet
+  const hasTriedRetry = useRef(false);
+  useEffect(() => {
+    if (pendingRestaurants.length === 0 && restaurants.length > 0 && location && !loading && !isFetching.current) {
+      if (!hasTriedRetry.current) {
+        hasTriedRetry.current = true;
+        setLoading(true);
+        loadRestaurants(location, radius, cuisineTypes, noFastFood, noConvenienceStore, true).finally(() => setLoading(false));
+      }
+    }
+    if (pendingRestaurants.length > 0) {
+      hasTriedRetry.current = false;
+    }
+  }, [pendingRestaurants.length, restaurants.length, location, loading]);
+
   // ── Render ────────────────────────────────────────────────────
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: t.bg }]}
-      edges={['top']}
+      edges={['top', 'bottom']}
     >
       {/* Header */}
       <View
@@ -297,7 +341,7 @@ export default function MainScreen({ navigation }) {
       >
         <View style={styles.headerTop}>
           <Text style={[styles.headerTitle, { color: t.text }]}>
-            {COMPACT_HEADER ? '🍽️ Food' : 'foodFinder 🍽️'}
+            {COMPACT_HEADER ? '🍽️ meso' : 'mesoHungy 🍽️'}
           </Text>
           <View style={styles.headerRight}>
             <View>
@@ -418,7 +462,7 @@ export default function MainScreen({ navigation }) {
 
       {/* Card area */}
       <View style={styles.cardArea}>
-        {loading && pendingRestaurants.length === 0 ? (
+        {loading && restaurants.length === 0 ? (
           <View style={styles.centered}>
             <ActivityIndicator size='large' color={t.accent} />
             <Text style={styles.loadingText}>Finding places near you...</Text>
@@ -446,6 +490,11 @@ export default function MainScreen({ navigation }) {
             >
               <Text style={styles.retryText}>Allow Location</Text>
             </TouchableOpacity>
+          </View>
+        ) : pendingRestaurants.length === 0 && loading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size='large' color={t.accent} />
+            <Text style={styles.loadingText}>Searching for more places...</Text>
           </View>
         ) : pendingRestaurants.length === 0 ? (
           <View style={styles.centered}>
@@ -542,7 +591,7 @@ export default function MainScreen({ navigation }) {
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionButtonText}>✕</Text>
+              <Text style={styles.nopeButtonText}>✕</Text>
             </TouchableOpacity>
           </Animated.View>
           <Animated.View style={{ transform: [{ scale: likeScale }] }}>
@@ -554,7 +603,7 @@ export default function MainScreen({ navigation }) {
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.actionButtonText}>♥</Text>
+              <Text style={styles.likeButtonText}>♥</Text>
             </TouchableOpacity>
           </Animated.View>
         </View>
@@ -807,7 +856,7 @@ function createStyles(t) {
       marginTop: 4,
       backgroundColor: t.surface,
       borderRadius: 20,
-      width: 210,
+      width: 240,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.08,
@@ -821,7 +870,7 @@ function createStyles(t) {
       alignItems: 'center',
       gap: 10,
       paddingHorizontal: 16,
-      paddingVertical: 1,
+      paddingVertical: 14,
     },
     dropdownIcon: { fontSize: 16 },
     dropdownText: { fontSize: 15, fontFamily: 'Raleway_400Regular', color: t.text },
@@ -901,7 +950,7 @@ function createStyles(t) {
     cuisineOptionLabelActive: { color: t.chipActiveText },
 
     // Card area
-    cardArea: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    cardArea: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 8, paddingBottom: 80 },
     centered: { alignItems: 'center', paddingHorizontal: 36 },
     loadingText: { marginTop: 16, fontSize: 15, color: t.textTertiary },
     errorEmoji: { fontSize: 48, marginBottom: 12 },
@@ -955,13 +1004,15 @@ function createStyles(t) {
 
     // Action buttons
     actionRow: {
+      position: 'absolute',
+      bottom: 16,
+      left: 0,
+      right: 0,
       flexDirection: 'row',
       justifyContent: 'center',
       gap: 40,
-      marginTop: -12,
-      paddingBottom: 8,
       backgroundColor: 'transparent',
-      borderTopWidth: 0,
+      zIndex: 20,
     },
     actionButton: {
       width: 60,
@@ -978,15 +1029,16 @@ function createStyles(t) {
     },
     nopeButton: {
       backgroundColor: t.card,
-      borderWidth: 1.5,
+      borderWidth: 2.5,
       borderColor: t.red,
     },
     likeButton: {
       backgroundColor: t.card,
-      borderWidth: 1.5,
+      borderWidth: 2.5,
       borderColor: t.green,
     },
-    actionButtonText: { fontSize: 24, fontWeight: '600' },
+    nopeButtonText: { fontSize: 24, fontWeight: '600', color: t.red },
+    likeButtonText: { fontSize: 24, fontWeight: '600', color: t.green },
 
     // Modal (cuisine picker)
     modalOverlay: { flex: 1, justifyContent: 'flex-end' },

@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRestaurants } from '../context/RestaurantContext';
 import { useTheme } from '../context/ThemeContext';
+import { getPhotoUrl } from '../services/googlePlaces';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = Math.min(SCREEN_WIDTH * 0.75, 360);
@@ -64,7 +65,30 @@ export default function DetailScreen({ route, navigation }) {
     });
   }
 
-  const images = restaurant.images?.length > 0 ? restaurant.images : [null];
+  // Load all photos lazily from refs when detail screen opens
+  const [allImages, setAllImages] = useState(restaurant.images || []);
+  useEffect(() => {
+    if (restaurant.allPhotoRefs?.length > 1) {
+      const fullUrls = restaurant.allPhotoRefs.map((ref) => getPhotoUrl(ref));
+      setAllImages(fullUrls);
+    }
+  }, [restaurant.id]);
+  const images = allImages.length > 0 ? allImages : [null];
+  const imageScrollRef = useRef(null);
+
+  // Auto-scroll photos every 3 seconds
+  useEffect(() => {
+    if (images.length <= 1 || images[0] === null) return;
+    const timer = setInterval(() => {
+      setCurrentImageIndex((prev) => {
+        const next = (prev + 1) % images.length;
+        imageScrollRef.current?.scrollTo({ x: next * SCREEN_WIDTH, animated: true });
+        return next;
+      });
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [images.length]);
+
   const todayIndex = new Date().getDay(); // 0=Sun, need to map to Foursquare index
   const todayHours = restaurant.hours?.[todayIndex === 0 ? 6 : todayIndex - 1];
 
@@ -73,6 +97,7 @@ export default function DetailScreen({ route, navigation }) {
       {/* Image carousel */}
       <View style={styles.imageContainer}>
         <ScrollView
+          ref={imageScrollRef}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}

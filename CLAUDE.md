@@ -18,16 +18,24 @@ There are no tests or linting scripts configured.
 
 ## API Key Setup
 
-The app reads API keys from `EXPO_PUBLIC_` environment variables via `env.js`. For local dev, create a `.env` file (gitignored):
+The app does **not** hold the Google Places API key. All Places API calls go through a Supabase Edge Function (`supabase/functions/places-proxy`) which holds the key as a secret.
+
+For local dev, create a `.env` file (gitignored):
 
 ```
-EXPO_PUBLIC_GOOGLE_API_KEY=your-google-places-api-key
+EXPO_PUBLIC_PLACES_PROXY_URL=https://xyuefjlrozbyapjeajid.supabase.co/functions/v1/places-proxy
 EXPO_PUBLIC_POSTHOG_API_KEY=your-posthog-api-key
 ```
 
 For EAS builds, these are set as project secrets on Expo.
 
-The Google Places API (v1 — New) must have the **Places API (New)** enabled in Google Cloud Console.
+The `GOOGLE_API_KEY` is set as a Supabase Edge Function secret (Project Settings → Edge Functions → Secrets). The Google Places API (v1 — New) must have the **Places API (New)** enabled in Google Cloud Console.
+
+**Proxy endpoints** (`supabase/functions/places-proxy/index.ts`):
+- `POST /search` — body `{ body, fieldMask }`, proxies `places:searchNearby`
+- `GET /photo?name=places/.../photos/...` — 302-redirects to a signed `lh3.googleusercontent.com` URL (the API key stays server-side)
+
+The function is deployed with `verify_jwt = false` so React Native's `<Image>` component can load `/photo` URLs without attaching auth headers.
 
 ## Architecture
 
@@ -47,7 +55,7 @@ This is a React Native (Expo) app called **foodFinder** — a Tinder-style resta
 - Hook: `useRestaurants()`
 
 **Data fetching** (`services/googlePlaces.js`):
-- Calls Google Places API (New) `searchNearby` endpoint
+- Calls the Supabase `places-proxy` edge function (which forwards to Google Places API (New))
 - Returns a normalized restaurant object with: `id`, `name`, `rating`, `priceLevel`, `images[]`, `address`, `tags[]`, `types[]`, `hours[]`, `phone`, `website`, `openNow`, `description`
 - `services/yelp.js` and `services/foursquare.js` exist as alternative/unused service stubs
 

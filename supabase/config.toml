@@ -1,0 +1,8 @@
+project_id = "xyuefjlrozbyapjeajid"
+
+[functions.places-proxy]
+# Public proxy — the app's <Image> component needs to hit /photo without
+# attaching auth headers, so JWT verification is disabled. The function
+# still holds the Google API key as a secret, and Google-side quotas cap
+# daily spend.
+verify_jwt = false

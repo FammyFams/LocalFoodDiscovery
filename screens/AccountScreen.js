@@ -76,7 +76,7 @@ export default function AccountScreen({ navigation }) {
   }
 
   function handleShare() {
-    Share.share({ message: "Check out foodFinder — swipe to find where to eat! " + (APP_STORE_URL || '') });
+    Share.share({ message: "Check out mesoHungy — swipe to find where to eat! " + (APP_STORE_URL || '') });
   }
 
   function handleRateApp() {
@@ -186,12 +186,17 @@ export default function AccountScreen({ navigation }) {
         <Text style={s.sectionHeader}>ABOUT</Text>
         <View style={s.card}>
           <TouchableOpacity style={s.row} onPress={handleShare} activeOpacity={0.6}>
-            <Text style={s.rowLabel}>Share foodFinder</Text>
+            <Text style={s.rowLabel}>Share mesoHungy</Text>
             <Text style={s.rowChevron}>›</Text>
           </TouchableOpacity>
           <View style={s.separator} />
           <TouchableOpacity style={s.row} onPress={handleRateApp} activeOpacity={0.6}>
             <Text style={s.rowLabel}>Rate on App Store</Text>
+            <Text style={s.rowChevron}>›</Text>
+          </TouchableOpacity>
+          <View style={s.separator} />
+          <TouchableOpacity style={s.row} onPress={() => Linking.openURL('https://mesohungy.com')} activeOpacity={0.6}>
+            <Text style={s.rowLabel}>Visit Our Website</Text>
             <Text style={s.rowChevron}>›</Text>
           </TouchableOpacity>
           <View style={s.separator} />

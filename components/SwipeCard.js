@@ -24,7 +24,7 @@ function getNextOpenTime(hours) {
   return match ? match[1].trim() : null;
 }
 const CARD_WIDTH = Math.min(SCREEN_WIDTH - 32, 420);
-const CARD_HEIGHT = Math.min(SCREEN_HEIGHT * 0.62, 520);
+const CARD_HEIGHT = SCREEN_HEIGHT * 0.62;
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.12;
 const SWIPE_OUT_DURATION = 300;
 
