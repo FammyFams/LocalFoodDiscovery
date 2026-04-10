@@ -4,6 +4,7 @@ import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, Platform, AppState, View, ActivityIndicator } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
 import { Lora_400Regular, Lora_600SemiBold, Lora_700Bold } from '@expo-google-fonts/lora';
@@ -31,6 +32,8 @@ function TabIcon({ emoji, focused }) {
 
 function TabNavigator() {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
+  const bottomPad = Math.max(insets.bottom, 12);
   return (
     <Tab.Navigator
       screenOptions={{
@@ -39,8 +42,8 @@ function TabNavigator() {
           borderTopColor: t.separator,
           borderTopWidth: 0.5,
           paddingTop: 6,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 12,
-          height: Platform.OS === 'ios' ? 92 : 68,
+          paddingBottom: bottomPad,
+          height: 56 + bottomPad,
         },
         tabBarActiveTintColor: t.accent,
         tabBarInactiveTintColor: t.textTertiary,
@@ -183,6 +186,7 @@ export default function App() {
   }
 
   return (
+    <SafeAreaProvider>
     <SettingsProvider>
     <ThemeProvider>
     <RestaurantProvider>
@@ -190,5 +194,6 @@ export default function App() {
     </RestaurantProvider>
     </ThemeProvider>
     </SettingsProvider>
+    </SafeAreaProvider>
   );
 }
