@@ -206,7 +206,6 @@ export default function MainScreen({ navigation }) {
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      console.log('GPS coords:', loc.coords.latitude, loc.coords.longitude);
       setLocation(loc.coords);
       setLocationLabel('Current Location');
     } catch (e) {
@@ -242,8 +241,6 @@ export default function MainScreen({ navigation }) {
         noFastFood: excludeFastFood,
         noConvenienceStore: excludeConvenience,
       });
-      console.log('Fetch returned:', results.length, 'restaurants');
-
       // Only keep places we haven't shown before
       const fresh = results.filter((r) => !seenIds.current.has(r.id));
       fresh.forEach((r) => seenIds.current.add(r.id));
