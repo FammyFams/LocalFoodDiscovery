@@ -90,7 +90,7 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
   if (cuisineTypes.length === 0) {
     rawPlaces = await fetchOneBucket({
       latitude, longitude, radiusMiles,
-      includedTypes: ['food'],
+      includedTypes: ['restaurant'],
       excludedTypes,
     });
   } else {
