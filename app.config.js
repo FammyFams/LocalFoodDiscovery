@@ -46,6 +46,12 @@ export default {
       ],
       "expo-font",
     ],
+    updates: {
+      url: "https://u.expo.dev/3f6d7769-4ad3-4e3f-b85a-828e80bad39b",
+    },
+    runtimeVersion: {
+      policy: "appVersion",
+    },
     extra: {
       eas: {
         projectId: "3f6d7769-4ad3-4e3f-b85a-828e80bad39b",
