@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSettings } from '../context/SettingsContext';
 import { useRestaurants } from '../context/RestaurantContext';
 import { useTheme } from '../context/ThemeContext';
+import { trackEvent } from '../services/analytics';
 
 const APP_VERSION = '1.0.0';
 const APP_STORE_URL = null;
@@ -125,7 +126,10 @@ export default function AccountScreen({ navigation }) {
             <Text style={s.rowLabel}>Dark Mode</Text>
             <Switch
               value={settings.darkMode}
-              onValueChange={(val) => updateSettings({ darkMode: val })}
+              onValueChange={(val) => {
+                updateSettings({ darkMode: val });
+                trackEvent('dark_mode_toggled', { enabled: val });
+              }}
               trackColor={{ false: '#E5E5EA', true: t.accent }}
               thumbColor="#fff"
             />

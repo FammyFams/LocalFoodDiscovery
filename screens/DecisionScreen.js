@@ -10,6 +10,7 @@ import {
 import SwipeCard from '../components/SwipeCard';
 import { useRestaurants } from '../context/RestaurantContext';
 import { useTheme } from '../context/ThemeContext';
+import { trackEvent } from '../services/analytics';
 
 export default function DecisionScreen({ navigation }) {
   const { likedRestaurants, removeLiked, dislikeRestaurant } = useRestaurants();
@@ -32,11 +33,19 @@ export default function DecisionScreen({ navigation }) {
   }
 
   function handleKeep(restaurant) {
+    trackEvent('decision_kept', {
+      restaurant_id: restaurant.id,
+      name: restaurant.name,
+    });
     setKept((prev) => [...prev, restaurant]);
     setDeck((prev) => prev.filter((r) => r.id !== restaurant.id));
   }
 
   function handleRemove(restaurant) {
+    trackEvent('decision_removed', {
+      restaurant_id: restaurant.id,
+      name: restaurant.name,
+    });
     removeLiked(restaurant.id);
     dislikeRestaurant(restaurant);
     setDeck((prev) => prev.filter((r) => r.id !== restaurant.id));

@@ -104,11 +104,19 @@ function AppContent() {
   const isDark = settings.darkMode;
 
   useEffect(() => {
-    initAnalytics().then(() => trackEvent('app_opened'));
+    let sessionStart = Date.now();
+    initAnalytics();
+    trackEvent('app_opened');
 
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') trackEvent('app_foregrounded');
-      if (state === 'background') trackEvent('app_backgrounded');
+      if (state === 'active') {
+        sessionStart = Date.now();
+        trackEvent('app_foregrounded');
+      }
+      if (state === 'background') {
+        const durationSec = Math.round((Date.now() - sessionStart) / 1000);
+        trackEvent('app_backgrounded', { session_duration_seconds: durationSec });
+      }
     });
     return () => sub.remove();
   }, []);

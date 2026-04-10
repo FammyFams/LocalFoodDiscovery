@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRestaurants } from '../context/RestaurantContext';
 import { useTheme } from '../context/ThemeContext';
 import { getPhotoUrl } from '../services/googlePlaces';
+import { trackEvent } from '../services/analytics';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = Math.min(SCREEN_WIDTH * 0.75, 360);
@@ -22,6 +23,14 @@ const IMAGE_HEIGHT = Math.min(SCREEN_WIDTH * 0.75, 360);
 export default function DetailScreen({ route, navigation }) {
   const { restaurant } = route.params;
   const t = useTheme();
+
+  useEffect(() => {
+    trackEvent('detail_viewed', {
+      restaurant_id: restaurant.id,
+      name: restaurant.name,
+      rating: restaurant.rating,
+    });
+  }, [restaurant.id]);
   const { likedRestaurants, notNowRestaurants, likeRestaurant, dislikeRestaurant, removeLiked, removeNotNow } =
     useRestaurants();
   const insets = useSafeAreaInsets();

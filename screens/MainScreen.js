@@ -265,7 +265,8 @@ export default function MainScreen({ navigation }) {
       name: restaurant.name,
       rating: restaurant.rating,
       price_level: restaurant.priceLevel,
-      cuisine: restaurant.tags?.[0],
+      tags: restaurant.tags,
+      open_now: restaurant.openNow,
     });
     removeTopCard(restaurant.id);
   }
@@ -277,6 +278,8 @@ export default function MainScreen({ navigation }) {
       name: restaurant.name,
       rating: restaurant.rating,
       price_level: restaurant.priceLevel,
+      tags: restaurant.tags,
+      open_now: restaurant.openNow,
     });
     removeTopCard(restaurant.id);
   }
@@ -654,6 +657,7 @@ export default function MainScreen({ navigation }) {
               style={styles.decisionGoButton}
               onPress={() => {
                 setDecisionPrompt(false);
+                trackEvent('decision_screen_opened', { liked_count: likedRestaurants.length });
                 navigation.navigate('Decision');
               }}
             >
