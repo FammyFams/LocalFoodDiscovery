@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Circle } from 'react-native-maps';
 import Slider from '@react-native-community/slider';
@@ -20,8 +20,21 @@ export default function MapPickerScreen({ navigation, route }) {
   const t = useTheme();
   const styles = useMemo(() => createStyles(t), [t]);
 
+  const mapRef = useRef(null);
+  const currentRegion = useRef(initialRegion);
   const [marker, setMarker] = useState(null);
   const [radius, setRadius] = useState(initialRadius);
+
+  function zoom(factor) {
+    const r = currentRegion.current;
+    if (!r?.latitudeDelta) return;
+    const next = {
+      ...r,
+      latitudeDelta: Math.min(Math.max(r.latitudeDelta * factor, 0.002), 100),
+      longitudeDelta: Math.min(Math.max(r.longitudeDelta * factor, 0.002), 100),
+    };
+    mapRef.current?.animateToRegion(next, 250);
+  }
 
   const initialRegion = {
     latitude: initialCoords?.latitude ?? 37.7749,
@@ -55,9 +68,11 @@ export default function MapPickerScreen({ navigation, route }) {
       </View>
 
       <MapView
+        ref={mapRef}
         style={styles.map}
         initialRegion={initialRegion}
         onPress={handleMapPress}
+        onRegionChangeComplete={(r) => { if (r?.latitudeDelta) currentRegion.current = r; }}
         showsUserLocation
         showsMyLocationButton={false}
       >
@@ -74,6 +89,15 @@ export default function MapPickerScreen({ navigation, route }) {
           </>
         )}
       </MapView>
+
+      <View style={[styles.zoomButtons, { bottom: marker ? 220 : insets.bottom + 24 }]}>
+        <TouchableOpacity style={styles.zoomButton} onPress={() => zoom(0.5)}>
+          <Text style={styles.zoomText}>+</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.zoomButton} onPress={() => zoom(2)}>
+          <Text style={styles.zoomText}>−</Text>
+        </TouchableOpacity>
+      </View>
 
       {marker && (
         <View style={[styles.panel, { paddingBottom: insets.bottom + 16 }]}>
@@ -143,5 +167,16 @@ function createStyles(t) {
       shadowOpacity: 0.4, shadowRadius: 8, elevation: 6,
     },
     confirmText: { color: '#fff', fontSize: 17, fontWeight: '700' },
+    zoomButtons: {
+      position: 'absolute', right: 16, zIndex: 10,
+      gap: 8,
+    },
+    zoomButton: {
+      width: 44, height: 44, borderRadius: 22,
+      backgroundColor: t.surface, justifyContent: 'center', alignItems: 'center',
+      shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2, shadowRadius: 4, elevation: 4,
+    },
+    zoomText: { fontSize: 24, fontWeight: '400', color: t.text, lineHeight: 28 },
   });
 }

@@ -107,7 +107,7 @@ export default function AccountScreen({ navigation }) {
     authButtonApple: { backgroundColor: settings.darkMode ? '#fff' : '#1C1C1E', marginBottom: 8 },
     authButtonText: { fontSize: 15, fontWeight: '600', color: t.textSecondary },
     authButtonAppleText: { color: settings.darkMode ? '#1C1C1E' : '#fff' },
-    authNote: { fontSize: 12, color: t.textQuaternary, textAlign: 'center', paddingBottom: 12 },
+    authNote: { fontSize: 12, color: t.textTertiary, textAlign: 'center', paddingBottom: 12 },
     priceRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
     priceChip: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: t.inputBg, alignItems: 'center' },
     priceChipActive: { backgroundColor: t.accent },

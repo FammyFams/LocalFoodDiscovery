@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,14 @@ import {
   Platform,
   Animated,
   Linking,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRestaurants } from '../context/RestaurantContext';
 import { useTheme } from '../context/ThemeContext';
 import { getPhotoUrl } from '../services/googlePlaces';
 import { trackEvent } from '../services/analytics';
+import Svg, { Path } from 'react-native-svg';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = Math.min(SCREEN_WIDTH * 0.75, 360);
@@ -74,6 +76,14 @@ export default function DetailScreen({ route, navigation }) {
     });
   }
 
+  function handleShare() {
+    const lines = [`🍽️ ${restaurant.name}`];
+    if (restaurant.address) lines.push(`📍 ${restaurant.address}`);
+    if (restaurant.rating) lines.push(`⭐ ${restaurant.rating}${restaurant.userRatingsTotal ? ` (${restaurant.userRatingsTotal.toLocaleString()} reviews)` : ''}`);
+    if (restaurant.website) lines.push(restaurant.website);
+    Share.share({ message: lines.join('\n') });
+  }
+
   // Load all photos lazily from refs when detail screen opens
   const [allImages, setAllImages] = useState(restaurant.images || []);
   useEffect(() => {
@@ -84,25 +94,27 @@ export default function DetailScreen({ route, navigation }) {
   }, [restaurant.id]);
   const images = allImages.length > 0 ? allImages : [null];
   const imageScrollRef = useRef(null);
+  const autoScrollTimer = useRef(null);
 
-  // Auto-scroll photos every 3 seconds
+  // Auto-scroll photos every 3 seconds; stops permanently if user swipes manually
   useEffect(() => {
     if (images.length <= 1 || images[0] === null) return;
-    const timer = setInterval(() => {
+    autoScrollTimer.current = setInterval(() => {
       setCurrentImageIndex((prev) => {
         const next = (prev + 1) % images.length;
         imageScrollRef.current?.scrollTo({ x: next * SCREEN_WIDTH, animated: true });
         return next;
       });
     }, 3000);
-    return () => clearInterval(timer);
+    return () => clearInterval(autoScrollTimer.current);
   }, [images.length]);
 
   const todayIndex = new Date().getDay(); // 0=Sun, need to map to Foursquare index
   const todayHours = restaurant.hours?.[todayIndex === 0 ? 6 : todayIndex - 1];
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: t.bg }]} showsVerticalScrollIndicator={false}>
+    <View style={[styles.container, { backgroundColor: t.bg }]}>
+    <ScrollView showsVerticalScrollIndicator={false}>
       {/* Image carousel */}
       <View style={styles.imageContainer}>
         <ScrollView
@@ -110,6 +122,9 @@ export default function DetailScreen({ route, navigation }) {
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
+          onScrollBeginDrag={() => {
+            clearInterval(autoScrollTimer.current);
+          }}
           onMomentumScrollEnd={(e) => {
             setCurrentImageIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH));
           }}
@@ -133,9 +148,6 @@ export default function DetailScreen({ route, navigation }) {
           </View>
         )}
 
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>‹</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Info */}
@@ -248,7 +260,7 @@ export default function DetailScreen({ route, navigation }) {
             <TouchableOpacity style={styles.infoRow} onPress={() => setShowAllHours((v) => !v)}>
               <Text style={styles.infoIcon}>🕐</Text>
               <Text style={[styles.infoText, { color: t.textSecondary }]}>{todayHours ?? 'See hours'}</Text>
-              <Text style={[styles.chevron, { color: t.border }]}>{showAllHours ? '▲' : '▼'}</Text>
+              <Text style={styles.chevron}>{showAllHours ? '▲' : '▼'}</Text>
             </TouchableOpacity>
             {showAllHours &&
               restaurant.hours.map((h, i) => (
@@ -287,8 +299,19 @@ export default function DetailScreen({ route, navigation }) {
             </TouchableOpacity>
           </Animated.View>
         </View>
+
+        <TouchableOpacity style={styles.shareButton} onPress={handleShare} activeOpacity={0.8}>
+          <Text style={styles.shareButtonText}>↑  Share with Friends</Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
+
+    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+      <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+        <Path d="M15 19l-7-7 7-7" stroke="#fff" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      </Svg>
+    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -306,10 +329,9 @@ function createStyles(t) {
     dotActive: { backgroundColor: '#fff', width: 16, borderRadius: 3 },
     backButton: {
       position: 'absolute', top: Platform.OS === 'ios' ? 60 : 36, left: 16,
-      width: 44, height: 44, borderRadius: 22,
+      width: 44, height: 44, borderRadius: 22, zIndex: 10,
       backgroundColor: 'rgba(0,0,0,0.35)', justifyContent: 'center', alignItems: 'center',
     },
-    backButtonText: { color: '#fff', fontSize: 30, fontWeight: '600', marginTop: -2 },
     info: { padding: 20 },
     nameRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' },
     name: { fontSize: 24, fontFamily: 'Lora_700Bold', color: t.text, flex: 1, letterSpacing: -0.3 },
@@ -345,7 +367,7 @@ function createStyles(t) {
       paddingHorizontal: 12, paddingVertical: 7,
     },
     mapLinkText: { fontSize: 13, fontFamily: 'Raleway_500Medium', color: t.blue },
-    chevron: { fontSize: 11, color: t.border, marginLeft: 4, marginTop: 3 },
+    chevron: { fontSize: 11, color: t.textTertiary, marginLeft: 4, marginTop: 3 },
     hoursSection: { marginBottom: 4 },
     hourLine: { fontSize: 13, color: t.textTertiary, marginLeft: 28, marginBottom: 3, lineHeight: 19 },
     actionRow: { flexDirection: 'row', marginTop: 4 },
@@ -356,5 +378,11 @@ function createStyles(t) {
     activeNotNow: { borderColor: t.red, backgroundColor: t.red },
     actionButtonText: { fontSize: 16, fontFamily: 'Raleway_600SemiBold', color: t.textSecondary },
     activeActionText: { color: '#fff' },
+    shareButton: {
+      marginTop: 12, paddingVertical: 14, borderRadius: 24,
+      alignItems: 'center', borderWidth: 1.5, borderColor: t.border,
+      backgroundColor: t.surface,
+    },
+    shareButtonText: { fontSize: 16, fontFamily: 'Raleway_600SemiBold', color: t.textSecondary },
   });
 }

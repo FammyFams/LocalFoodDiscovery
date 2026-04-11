@@ -14,7 +14,7 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import SwipeCard from '../components/SwipeCard';
 import { fetchNearbyRestaurants } from '../services/googlePlaces';
@@ -25,6 +25,23 @@ import { useRestaurants } from '../context/RestaurantContext';
 import { useTheme } from '../context/ThemeContext';
 import { BlurView } from 'expo-blur';
 import { trackEvent } from '../services/analytics';
+import Svg, { Path, G } from 'react-native-svg';
+
+function CrossedForks({ size = 28, color }) {
+  const forkPath = "M0,-11 L0,11 M-2.5,-11 L-2.5,-6 M2.5,-11 L2.5,-6 M-2.5,-6 L2.5,-6";
+  return (
+    <Svg width={size} height={size} viewBox="-14 -14 28 28">
+      <G stroke={color} strokeWidth="2.2" strokeLinecap="round" fill="none">
+        <G transform="rotate(45)">
+          <Path d={forkPath} />
+        </G>
+        <G transform="rotate(-45)">
+          <Path d={forkPath} />
+        </G>
+      </G>
+    </Svg>
+  );
+}
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const COMPACT_HEADER = SCREEN_WIDTH < 400;
@@ -34,6 +51,8 @@ const RADIUS_MAX = 5;
 
 const CUISINE_OPTIONS = [
   { label: 'Any', type: null, emoji: '🍽️' },
+  { label: 'Breakfast', type: 'breakfast_restaurant', emoji: '🍳' },
+  { label: 'Dessert', type: 'dessert_restaurant', emoji: '🍰' },
   { label: 'Bar & Pub', type: 'bar', emoji: '🍺' },
   { label: 'Fast Food', type: 'fast_food_restaurant', emoji: '🍟' },
   { label: 'American', type: 'american_restaurant', emoji: '🍔' },
@@ -62,6 +81,7 @@ const CUISINE_OPTIONS = [
 
 export default function MainScreen({ navigation }) {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(t), [t]);
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -591,7 +611,7 @@ export default function MainScreen({ navigation }) {
               }}
               activeOpacity={0.8}
             >
-              <Text style={styles.nopeButtonText}>✕</Text>
+              <CrossedForks size={28} color={t.red} />
             </TouchableOpacity>
           </Animated.View>
           <Animated.View style={{ transform: [{ scale: likeScale }] }}>
@@ -695,7 +715,7 @@ export default function MainScreen({ navigation }) {
             activeOpacity={1}
             onPress={() => setCuisineModalVisible(false)}
           />
-          <View style={[styles.modalSheet, styles.cuisineSheet]}>
+          <View style={[styles.modalSheet, styles.cuisineSheet, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
             <View style={styles.modalHandle} />
             <View style={styles.filterToggleSection}>
               <View style={styles.filterToggleRow}>
@@ -721,11 +741,19 @@ export default function MainScreen({ navigation }) {
             </View>
             <Text style={styles.modalTitle}>What are you in the mood for?</Text>
             <FlatList
-              data={CUISINE_OPTIONS}
+              data={(() => {
+                const rem = CUISINE_OPTIONS.length % 3;
+                return rem === 0
+                  ? CUISINE_OPTIONS
+                  : [...CUISINE_OPTIONS, ...Array(3 - rem).fill({ label: '__filler__', type: '__filler__', emoji: '' })];
+              })()}
               keyExtractor={(item) => item.label}
               numColumns={3}
               columnWrapperStyle={styles.cuisineGrid}
               renderItem={({ item }) => {
+                if (item.type === '__filler__') {
+                  return <View style={{ flex: 1, marginHorizontal: 3 }} />;
+                }
                 const active =
                   item.type === null
                     ? cuisineTypes.length === 0
@@ -994,7 +1022,7 @@ function createStyles(t) {
       marginBottom: 2,
     },
     emptyActionSub: { fontSize: 12, color: t.textTertiary },
-    emptyActionChevron: { fontSize: 18, color: t.border, fontWeight: '600' },
+    emptyActionChevron: { fontSize: 18, color: t.textSecondary, fontWeight: '600' },
     retryButton: {
       backgroundColor: t.accent,
       paddingHorizontal: 28,
@@ -1059,7 +1087,7 @@ function createStyles(t) {
       width: 36,
       height: 4,
       borderRadius: 2,
-      backgroundColor: t.border,
+      backgroundColor: t.textTertiary,
       alignSelf: 'center',
       marginTop: 10,
       marginBottom: 16,

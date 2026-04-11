@@ -266,6 +266,6 @@ function createStyles(t) {
     metaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 3 },
     metaText: { fontSize: 13, color: t.textSecondary, fontFamily: 'Raleway_500Medium' },
     cuisine: { fontSize: 12, color: t.textTertiary, fontFamily: 'Raleway_400Regular', marginBottom: 2 },
-    address: { fontSize: 12, color: t.textQuaternary, fontFamily: 'Raleway_400Regular' },
+    address: { fontSize: 12, color: t.textTertiary, fontFamily: 'Raleway_400Regular' },
   });
 }
