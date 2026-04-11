@@ -70,12 +70,17 @@ async function fetchOneBucket({ latitude, longitude, radiusMiles, includedTypes,
       },
     },
   };
+  if (!PLACES_PROXY_URL) {
+    throw new Error('Restaurant service URL not configured');
+  }
   const response = await fetch(`${PLACES_PROXY_URL}/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ body, fieldMask: FIELD_MASK }),
   });
-  if (!response.ok) return [];
+  if (!response.ok) {
+    throw new Error(`Restaurant search failed (${response.status})`);
+  }
   const data = await response.json();
   return data.places || [];
 }
