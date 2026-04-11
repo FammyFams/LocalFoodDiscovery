@@ -34,7 +34,8 @@ function parseTypes(types: string[] = []): string[] {
 }
 
 
-const FIELD_MASK: string = [
+// Card-view fields only (Basic/Essential SKU tier — much cheaper)
+const CARD_FIELD_MASK: string = [
   'places.id',
   'places.displayName',
   'places.rating',
@@ -43,20 +44,24 @@ const FIELD_MASK: string = [
   'places.photos',
   'places.formattedAddress',
   'places.location',
-  'places.editorialSummary',
   'places.regularOpeningHours',
-  'places.nationalPhoneNumber',
-  'places.websiteUri',
   'places.types',
-  'places.servesBeer',
-  'places.servesWine',
-  'places.servesBrunch',
-  'places.servesBreakfast',
-  'places.servesLunch',
-  'places.servesDinner',
-  'places.takeout',
-  'places.delivery',
-  'places.dineIn',
+].join(',');
+
+// Detail-only fields fetched on demand via Place Details
+const DETAIL_FIELD_MASK: string = [
+  'editorialSummary',
+  'nationalPhoneNumber',
+  'websiteUri',
+  'servesBeer',
+  'servesWine',
+  'servesBrunch',
+  'servesBreakfast',
+  'servesLunch',
+  'servesDinner',
+  'takeout',
+  'delivery',
+  'dineIn',
 ].join(',');
 
 interface FetchBucketParams {
@@ -85,7 +90,7 @@ async function fetchOneBucket({ latitude, longitude, radiusMiles, includedTypes,
   const response = await fetch(`${PLACES_PROXY_URL}/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ body, fieldMask: FIELD_MASK }),
+    body: JSON.stringify({ body, fieldMask: CARD_FIELD_MASK }),
   });
   if (!response.ok) {
     throw new Error(`Restaurant search failed (${response.status})`);
@@ -151,17 +156,36 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
     distance: null,
     priceLevel: parsePriceLevel(place.priceLevel),
     images: (place.photos || []).slice(0, 1).map((p: any) => getPhotoUrl(p.name)),
-    allPhotoRefs: (place.photos || []).slice(0, 3).map((p: any) => p.name),
+    allPhotoRefs: (place.photos || []).slice(0, 2).map((p: any) => p.name),
     address: place.formattedAddress ?? 'Address unavailable',
     rating: place.rating ? place.rating.toFixed(1) : null,
     userRatingsTotal: place.userRatingCount ?? null,
-    // Extra detail fields
-    description: place.editorialSummary?.text ?? null,
-    phone: place.nationalPhoneNumber ?? null,
-    website: place.websiteUri ?? null,
+    // Detail fields — null until fetched on demand via fetchRestaurantDetails()
+    description: null,
+    phone: null,
+    website: null,
     openNow: place.regularOpeningHours?.openNow ?? null,
     hours: place.regularOpeningHours?.weekdayDescriptions ?? [],
     types: parseTypes(place.types),
+    tags: [],
+  }));
+}
+
+export async function fetchRestaurantDetails(placeId: string): Promise<Partial<Restaurant>> {
+  if (!PLACES_PROXY_URL) {
+    throw new Error('Restaurant service URL not configured');
+  }
+  const response = await fetch(
+    `${PLACES_PROXY_URL}/details?id=${encodeURIComponent(placeId)}`
+  );
+  if (!response.ok) {
+    throw new Error(`Detail fetch failed (${response.status})`);
+  }
+  const place = await response.json();
+  return {
+    description: place.editorialSummary?.text ?? null,
+    phone: place.nationalPhoneNumber ?? null,
+    website: place.websiteUri ?? null,
     tags: [
       place.dineIn && 'Dine In',
       place.takeout && 'Takeout',
@@ -173,5 +197,7 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
       place.servesBeer && 'Beer',
       place.servesWine && 'Wine',
     ].filter(Boolean) as string[],
-  }));
+  };
 }
+
+export { DETAIL_FIELD_MASK };

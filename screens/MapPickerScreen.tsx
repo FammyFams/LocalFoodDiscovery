@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Circle, Region } from 'react-native-maps';
 import Slider from '@react-native-community/slider';
+import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../hooks/useThemedStyles';
@@ -53,6 +54,18 @@ export default function MapPickerScreen({ navigation, route }: { navigation: any
     setMarker(e.nativeEvent.coordinate);
   }
 
+  async function goToCurrentLocation() {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') return;
+    const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
+    mapRef.current?.animateToRegion({
+      latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+      latitudeDelta: 0.04,
+      longitudeDelta: 0.04,
+    }, 500);
+  }
+
   function handleConfirm() {
     navigation.navigate('Tabs', { screen: 'Discover', params: { pickedLocation: marker, pickedRadius: radius } });
   }
@@ -96,6 +109,9 @@ export default function MapPickerScreen({ navigation, route }: { navigation: any
       </MapView>
 
       <View style={[styles.zoomButtons, { bottom: marker ? 220 : insets.bottom + 24 }]}>
+        <TouchableOpacity style={styles.zoomButton} onPress={goToCurrentLocation}>
+          <Text style={styles.zoomText}>◎</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={styles.zoomButton} onPress={() => zoom(0.5)}>
           <Text style={styles.zoomText}>+</Text>
         </TouchableOpacity>

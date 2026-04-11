@@ -73,6 +73,45 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ---- Place details endpoint -------------------------------------------
+    if (req.method === "GET" && path === "/details") {
+      const placeId = url.searchParams.get("id");
+      if (!placeId) {
+        return jsonResponse({ error: "Missing id parameter" }, 400);
+      }
+
+      const fieldMask = [
+        "editorialSummary",
+        "nationalPhoneNumber",
+        "websiteUri",
+        "servesBeer",
+        "servesWine",
+        "servesBrunch",
+        "servesBreakfast",
+        "servesLunch",
+        "servesDinner",
+        "takeout",
+        "delivery",
+        "dineIn",
+      ].join(",");
+
+      const response = await fetch(
+        `${PLACES_BASE}/places/${encodeURIComponent(placeId)}`,
+        {
+          headers: {
+            "X-Goog-Api-Key": GOOGLE_API_KEY,
+            "X-Goog-FieldMask": fieldMask,
+          },
+        }
+      );
+
+      const text = await response.text();
+      return new Response(text, {
+        status: response.status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ---- Photo redirect endpoint -----------------------------------------
     if (req.method === "GET" && path === "/photo") {
       const photoName = url.searchParams.get("name");

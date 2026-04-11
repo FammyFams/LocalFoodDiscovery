@@ -2,7 +2,7 @@ export default {
   expo: {
     name: "mesoHungy",
     slug: "food-finder",
-    version: "1.1.0",
+    version: "1.2.0",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -25,7 +25,7 @@ export default {
         backgroundColor: "#212529",
       },
       package: "com.mesohungry.app",
-      versionCode: 1,
+      versionCode: 2,
       permissions: ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
       config: {
         googleMaps: {

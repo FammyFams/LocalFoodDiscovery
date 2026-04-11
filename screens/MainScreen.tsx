@@ -134,11 +134,26 @@ export default function MainScreen({ navigation, route }: { navigation: any; rou
       return;
     }
     try {
+      // Use last known position for instant startup, then refine only if far off
+      const lastKnown = await Location.getLastKnownPositionAsync();
+      if (lastKnown) {
+        setLocation(lastKnown.coords);
+        setLocationLabel('Current Location');
+      }
       const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
+        accuracy: Location.Accuracy.Low,
       });
-      setLocation(loc.coords);
-      setLocationLabel('Current Location');
+      if (!lastKnown) {
+        setLocation(loc.coords);
+        setLocationLabel('Current Location');
+      } else {
+        // Only update if moved more than ~500m to avoid a redundant API call
+        const dLat = Math.abs(loc.coords.latitude - lastKnown.coords.latitude);
+        const dLng = Math.abs(loc.coords.longitude - lastKnown.coords.longitude);
+        if (dLat > 0.005 || dLng > 0.005) {
+          setLocation(loc.coords);
+        }
+      }
     } catch {
       setError('Could not get your location. Please try again.');
     }
@@ -229,7 +244,7 @@ export default function MainScreen({ navigation, route }: { navigation: any; rou
         ...notNowRestaurants.map((r) => r.id),
       ]);
       const pending = remaining.filter((r) => !acted.has(r.id));
-      if (pending.length < 5 && location && !isFetching.current) {
+      if (pending.length < 3 && location && !isFetching.current) {
         loadRestaurants(location, radius, cuisineTypes, noFastFood, noConvenienceStore, true);
       }
       return remaining;
@@ -273,11 +288,15 @@ export default function MainScreen({ navigation, route }: { navigation: any; rou
     prevLikedCount.current = count;
   }, [likedRestaurants.length]);
 
+  const filterTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (location) {
+    if (!location) return;
+    if (filterTimeout.current) clearTimeout(filterTimeout.current);
+    filterTimeout.current = setTimeout(() => {
       setRestaurants([]);
       loadRestaurants(location, radius, cuisineTypes, noFastFood, noConvenienceStore);
-    }
+    }, 300);
+    return () => { if (filterTimeout.current) clearTimeout(filterTimeout.current); };
   }, [location, radius, cuisineTypes, noFastFood, noConvenienceStore, fetchKey, loadRestaurants]);
 
   useEffect(() => {

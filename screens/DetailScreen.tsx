@@ -11,13 +11,14 @@ import {
   Animated,
   Linking,
   Share,
+  ActivityIndicator,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRestaurants } from '../context/RestaurantContext';
 import { useThemedStyles } from '../hooks/useThemedStyles';
-import { getPhotoUrl } from '../services/googlePlaces';
+import { getPhotoUrl, fetchRestaurantDetails } from '../services/googlePlaces';
 import { trackEvent } from '../services/analytics';
 import Svg, { Path } from 'react-native-svg';
 import type { Restaurant, Theme } from '../types';
@@ -31,24 +32,39 @@ interface DetailScreenProps {
 }
 
 export default function DetailScreen({ route, navigation }: DetailScreenProps) {
-  const { restaurant } = route.params;
+  const { restaurant: routeRestaurant } = route.params;
+  const [detailFields, setDetailFields] = useState<Partial<Restaurant>>({});
+  const restaurant = { ...routeRestaurant, ...detailFields };
+  const [detailLoading, setDetailLoading] = useState(false);
   const styles = useThemedStyles(createStyles);
 
   useEffect(() => {
     trackEvent('detail_viewed', {
-      restaurant_id: restaurant.id,
-      name: restaurant.name,
-      rating: restaurant.rating,
+      restaurant_id: routeRestaurant.id,
+      name: routeRestaurant.name,
+      rating: routeRestaurant.rating,
     });
-  }, [restaurant.id]);
+  }, [routeRestaurant.id]);
+
+  // Lazy-fetch detail fields (description, phone, website, tags)
+  useEffect(() => {
+    if (routeRestaurant.description !== null) return; // already have details
+    let cancelled = false;
+    setDetailLoading(true);
+    fetchRestaurantDetails(routeRestaurant.id)
+      .then((details) => { if (!cancelled) setDetailFields(details); })
+      .catch(() => {}) // detail fields are optional — fail silently
+      .finally(() => { if (!cancelled) setDetailLoading(false); });
+    return () => { cancelled = true; };
+  }, [routeRestaurant.id]);
   const { likedRestaurants, notNowRestaurants, likeRestaurant, dislikeRestaurant, removeLiked, removeNotNow } =
     useRestaurants();
   const insets = useSafeAreaInsets();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showAllHours, setShowAllHours] = useState(false);
 
-  const isLiked = likedRestaurants.some((r) => r.id === restaurant.id);
-  const isNotNow = notNowRestaurants.some((r) => r.id === restaurant.id);
+  const isLiked = likedRestaurants.some((r) => r.id === routeRestaurant.id);
+  const isNotNow = notNowRestaurants.some((r) => r.id === routeRestaurant.id);
 
   const likeAnim = useRef(new Animated.Value(1)).current;
   const notNowAnim = useRef(new Animated.Value(1)).current;
@@ -202,6 +218,11 @@ export default function DetailScreen({ route, navigation }: DetailScreenProps) {
         </View>
 
         {/* Description */}
+        {detailLoading && (
+          <View style={styles.section}>
+            <ActivityIndicator size="small" color={styles.description.color} />
+          </View>
+        )}
         {restaurant.description && (
           <View style={styles.section}>
             <Text style={styles.description}>{restaurant.description}</Text>
