@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
-  Linking,
+
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRestaurants } from '../context/RestaurantContext';
@@ -32,30 +32,8 @@ export default function LikedScreen({ navigation }) {
     );
   }
 
-  // TODO: Remove this button or keep it — experimental export feature
-  function exportToGoogleMaps() {
-    // Google Maps search URLs have a length limit, so open each as a saved place list
-    // Use the "dir" endpoint with waypoints (max ~25) for best coverage
-    if (likedRestaurants.length === 0) return;
-    if (likedRestaurants.length === 1) {
-      const r = likedRestaurants[0];
-      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.name + ', ' + r.address)}`);
-      return;
-    }
-    const places = likedRestaurants.slice(0, 25);
-    const origin = encodeURIComponent(places[0].name + ', ' + places[0].address);
-    const destination = encodeURIComponent(places[places.length - 1].name + ', ' + places[places.length - 1].address);
-    const waypoints = places.slice(1, -1).map((r) => encodeURIComponent(r.name + ', ' + r.address)).join('|');
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}${waypoints ? '&waypoints=' + waypoints : ''}`;
-    Linking.openURL(url);
-  }
-
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
-      {/* TODO: Remove — experimental export button */}
-      <TouchableOpacity style={styles.exportButton} onPress={exportToGoogleMaps}>
-        <Text style={styles.exportButtonText}>🗺️ View All on Google Maps</Text>
-      </TouchableOpacity>
     <FlatList
       data={likedRestaurants}
       keyExtractor={(item) => item.id}
@@ -119,10 +97,5 @@ function createStyles(t) {
     chevron: { fontSize: 20, color: t.textTertiary, fontWeight: '400' },
     removeButton: { padding: 4 },
     removeText: { fontSize: 13, color: t.textTertiary, fontWeight: '500' },
-    exportButton: {
-      backgroundColor: t.accent, borderRadius: 10, marginHorizontal: 16,
-      marginTop: 12, marginBottom: 4, paddingVertical: 11, alignItems: 'center',
-    },
-    exportButtonText: { color: '#fff', fontWeight: '600', fontSize: 15 },
   });
 }
