@@ -4,9 +4,9 @@ import Constants from 'expo-constants';
 import { Dimensions, Platform } from 'react-native';
 import { POSTHOG_API_KEY } from '../env';
 
-let posthog = null;
+let posthog: PostHog | null = null;
 
-export function initAnalytics() {
+export function initAnalytics(): void {
   if (!POSTHOG_API_KEY) {
     console.warn('[Analytics] No PostHog API key found');
     return;
@@ -38,7 +38,7 @@ export function initAnalytics() {
   }
 }
 
-export function trackEvent(event, properties = {}) {
+export function trackEvent(event: string, properties: Record<string, any> = {}): void {
   if (!posthog) {
     console.warn('[Analytics] PostHog not initialized, skipping:', event);
     return;
@@ -46,6 +46,6 @@ export function trackEvent(event, properties = {}) {
   posthog.capture(event, properties);
 }
 
-export function getPosthog() {
+export function getPosthog(): PostHog | null {
   return posthog;
 }

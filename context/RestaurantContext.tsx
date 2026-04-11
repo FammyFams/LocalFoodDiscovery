@@ -1,14 +1,15 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Restaurant, RestaurantContextValue } from '../types';
 
-const RestaurantContext = createContext(null);
+const RestaurantContext = createContext<RestaurantContextValue | null>(null);
 
 const LIKED_KEY = '@foodtinder_liked';
 const NOT_NOW_KEY = '@foodtinder_notnow';
 
-export function RestaurantProvider({ children }) {
-  const [likedRestaurants, setLikedRestaurants] = useState([]);
-  const [notNowRestaurants, setNotNowRestaurants] = useState([]);
+export function RestaurantProvider({ children }: { children: ReactNode }) {
+  const [likedRestaurants, setLikedRestaurants] = useState<Restaurant[]>([]);
+  const [notNowRestaurants, setNotNowRestaurants] = useState<Restaurant[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -20,7 +21,7 @@ export function RestaurantProvider({ children }) {
         ]);
         if (liked) setLikedRestaurants(JSON.parse(liked));
         if (notNow) setNotNowRestaurants(JSON.parse(notNow));
-      } catch {}
+      } catch (e) { console.warn('[RestaurantContext] Failed to load saved data:', e); }
       setLoaded(true);
     }
     load();
@@ -28,33 +29,33 @@ export function RestaurantProvider({ children }) {
 
   useEffect(() => {
     if (!loaded) return;
-    AsyncStorage.setItem(LIKED_KEY, JSON.stringify(likedRestaurants)).catch(() => {});
+    AsyncStorage.setItem(LIKED_KEY, JSON.stringify(likedRestaurants)).catch((e) => console.warn('[RestaurantContext] Failed to save liked:', e));
   }, [likedRestaurants, loaded]);
 
   useEffect(() => {
     if (!loaded) return;
-    AsyncStorage.setItem(NOT_NOW_KEY, JSON.stringify(notNowRestaurants)).catch(() => {});
+    AsyncStorage.setItem(NOT_NOW_KEY, JSON.stringify(notNowRestaurants)).catch((e) => console.warn('[RestaurantContext] Failed to save notNow:', e));
   }, [notNowRestaurants, loaded]);
 
-  const likeRestaurant = useCallback((restaurant) => {
+  const likeRestaurant = useCallback((restaurant: Restaurant) => {
     setLikedRestaurants((prev) => {
       if (prev.some((r) => r.id === restaurant.id)) return prev;
       return [restaurant, ...prev];
     });
   }, []);
 
-  const dislikeRestaurant = useCallback((restaurant) => {
+  const dislikeRestaurant = useCallback((restaurant: Restaurant) => {
     setNotNowRestaurants((prev) => {
       if (prev.some((r) => r.id === restaurant.id)) return prev;
       return [restaurant, ...prev];
     });
   }, []);
 
-  const removeLiked = useCallback((id) => {
+  const removeLiked = useCallback((id: string) => {
     setLikedRestaurants((prev) => prev.filter((r) => r.id !== id));
   }, []);
 
-  const removeNotNow = useCallback((id) => {
+  const removeNotNow = useCallback((id: string) => {
     setNotNowRestaurants((prev) => prev.filter((r) => r.id !== id));
   }, []);
 
@@ -72,7 +73,7 @@ export function RestaurantProvider({ children }) {
   );
 }
 
-export function useRestaurants() {
+export function useRestaurants(): RestaurantContextValue {
   const ctx = useContext(RestaurantContext);
   if (!ctx) throw new Error('useRestaurants must be used inside RestaurantProvider');
   return ctx;

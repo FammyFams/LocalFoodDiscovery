@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,32 +7,34 @@ import {
   Animated,
   SafeAreaView,
 } from 'react-native';
-import SwipeCard from '../components/SwipeCard';
+import SwipeCard, { SwipeCardRef } from '../components/SwipeCard';
 import { useRestaurants } from '../context/RestaurantContext';
 import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 import { trackEvent } from '../services/analytics';
+import type { Restaurant, Theme } from '../types';
 
-export default function DecisionScreen({ navigation }) {
+export default function DecisionScreen({ navigation }: { navigation: any }) {
   const { likedRestaurants, removeLiked, dislikeRestaurant } = useRestaurants();
   const t = useTheme();
-  const styles = useMemo(() => createStyles(t), [t]);
+  const styles = useThemedStyles(createStyles);
 
   // Snapshot the liked list when this screen opens so the deck is stable
-  const [deck, setDeck] = useState(() => [...likedRestaurants]);
-  const [kept, setKept] = useState([]);
+  const [deck, setDeck] = useState<Restaurant[]>(() => [...likedRestaurants]);
+  const [kept, setKept] = useState<Restaurant[]>([]);
 
-  const topCardRef = useRef(null);
+  const topCardRef = useRef<SwipeCardRef>(null);
   const likeScale = useRef(new Animated.Value(1)).current;
   const nopeScale = useRef(new Animated.Value(1)).current;
 
-  function animateButton(anim) {
+  function animateButton(anim: Animated.Value) {
     Animated.sequence([
       Animated.spring(anim, { toValue: 1.3, useNativeDriver: true, speed: 50, bounciness: 20 }),
       Animated.spring(anim, { toValue: 1, useNativeDriver: true, speed: 20 }),
     ]).start();
   }
 
-  function handleKeep(restaurant) {
+  function handleKeep(restaurant: Restaurant) {
     trackEvent('decision_kept', {
       restaurant_id: restaurant.id,
       name: restaurant.name,
@@ -41,7 +43,7 @@ export default function DecisionScreen({ navigation }) {
     setDeck((prev) => prev.filter((r) => r.id !== restaurant.id));
   }
 
-  function handleRemove(restaurant) {
+  function handleRemove(restaurant: Restaurant) {
     trackEvent('decision_removed', {
       restaurant_id: restaurant.id,
       name: restaurant.name,
@@ -172,7 +174,7 @@ export default function DecisionScreen({ navigation }) {
   );
 }
 
-function createStyles(t) {
+function createStyles(t: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: t.bg },
 

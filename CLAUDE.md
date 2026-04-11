@@ -70,4 +70,4 @@ This is a React Native (Expo) app called **foodFinder** — a Tinder-style resta
 - Alternatives: text search (geocoded via `expo-location`), or map pin via `MapPickerScreen` (uses `react-native-maps`)
 - Picked map location is passed back to `MainScreen` via `route.params.pickedLocation`
 
-**Brand color**: `#34AFA9` (orange) used throughout for primary actions and accents.
+**Brand color**: `#228B22` (forest green, light) / `#34A853` (green, dark) used throughout for primary actions and accents.

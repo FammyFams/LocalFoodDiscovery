@@ -1,31 +1,44 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import MapView, { Marker, Circle } from 'react-native-maps';
+import MapView, { Marker, Circle, Region } from 'react-native-maps';
 import Slider from '@react-native-community/slider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { setPendingLocation } from '../services/locationBridge';
 import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
+import type { Theme } from '../types';
 
 const RADIUS_MIN = 0.5;
 const RADIUS_MAX = 5;
 
-function milesToMeters(miles) {
+interface Coordinate {
+  latitude: number;
+  longitude: number;
+}
+
+function milesToMeters(miles: number): number {
   return miles * 1609.34;
 }
 
-export default function MapPickerScreen({ navigation, route }) {
+export default function MapPickerScreen({ navigation, route }: { navigation: any; route: any }) {
   const initialCoords = route.params?.initialCoords;
   const initialRadius = route.params?.initialRadius ?? 1;
   const insets = useSafeAreaInsets();
   const t = useTheme();
-  const styles = useMemo(() => createStyles(t), [t]);
+  const styles = useThemedStyles(createStyles);
 
-  const mapRef = useRef(null);
-  const currentRegion = useRef(initialRegion);
-  const [marker, setMarker] = useState(null);
-  const [radius, setRadius] = useState(initialRadius);
+  const initialRegion: Region = {
+    latitude: initialCoords?.latitude ?? 37.7749,
+    longitude: initialCoords?.longitude ?? -122.4194,
+    latitudeDelta: 0.08,
+    longitudeDelta: 0.08,
+  };
 
-  function zoom(factor) {
+  const mapRef = useRef<MapView>(null);
+  const currentRegion = useRef<Region>(initialRegion);
+  const [marker, setMarker] = useState<Coordinate | null>(null);
+  const [radius, setRadius] = useState<number>(initialRadius);
+
+  function zoom(factor: number) {
     const r = currentRegion.current;
     if (!r?.latitudeDelta) return;
     const next = {
@@ -36,20 +49,12 @@ export default function MapPickerScreen({ navigation, route }) {
     mapRef.current?.animateToRegion(next, 250);
   }
 
-  const initialRegion = {
-    latitude: initialCoords?.latitude ?? 37.7749,
-    longitude: initialCoords?.longitude ?? -122.4194,
-    latitudeDelta: 0.08,
-    longitudeDelta: 0.08,
-  };
-
-  function handleMapPress(e) {
+  function handleMapPress(e: any) {
     setMarker(e.nativeEvent.coordinate);
   }
 
   function handleConfirm() {
-    setPendingLocation(marker, radius);
-    navigation.goBack();
+    navigation.navigate('Tabs', { screen: 'Discover', params: { pickedLocation: marker, pickedRadius: radius } });
   }
 
   return (
@@ -72,7 +77,7 @@ export default function MapPickerScreen({ navigation, route }) {
         style={styles.map}
         initialRegion={initialRegion}
         onPress={handleMapPress}
-        onRegionChangeComplete={(r) => { if (r?.latitudeDelta) currentRegion.current = r; }}
+        onRegionChangeComplete={(r: Region) => { if (r?.latitudeDelta) currentRegion.current = r; }}
         showsUserLocation
         showsMyLocationButton={false}
       >
@@ -127,7 +132,7 @@ export default function MapPickerScreen({ navigation, route }) {
   );
 }
 
-function createStyles(t) {
+function createStyles(t: Theme) {
   return StyleSheet.create({
     container: { flex: 1 },
     map: { flex: 1 },

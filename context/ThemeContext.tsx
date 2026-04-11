@@ -1,7 +1,8 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import { useSettings } from './SettingsContext';
+import { Theme } from '../types';
 
-const light = {
+const light: Theme = {
   bg: '#F5F5DC',
   surface: '#F5F5DC',
   card: '#FFFDF7',
@@ -28,7 +29,7 @@ const light = {
   chipInactiveText: '#5C4033',
 };
 
-const dark = {
+const dark: Theme = {
   bg: '#2A2620',
   surface: '#2A2620',
   card: '#363028',
@@ -55,9 +56,9 @@ const dark = {
   chipInactiveText: '#C8BFA8',
 };
 
-const ThemeContext = createContext(light);
+const ThemeContext = createContext<Theme>(light);
 
-export function ThemeProvider({ children }) {
+export function ThemeProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
   const theme = settings.darkMode ? dark : light;
   return (
@@ -67,6 +68,6 @@ export function ThemeProvider({ children }) {
   );
 }
 
-export function useTheme() {
+export function useTheme(): Theme {
   return useContext(ThemeContext);
 }

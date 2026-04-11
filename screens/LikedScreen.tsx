@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,34 +6,38 @@ import {
   TouchableOpacity,
   StyleSheet,
   Image,
+
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRestaurants } from '../context/RestaurantContext';
 import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
+import type { Restaurant, Theme } from '../types';
 
-export default function NotNowScreen({ navigation }) {
-  const { notNowRestaurants, removeNotNow, likeRestaurant } = useRestaurants();
+export default function LikedScreen({ navigation }: { navigation: any }) {
+  const { likedRestaurants, removeLiked } = useRestaurants();
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => createStyles(t), [t]);
+  const styles = useThemedStyles(createStyles);
 
-  function openDetail(item) {
+  function openDetail(item: Restaurant) {
     navigation.navigate('Detail', { restaurant: item });
   }
 
-  if (notNowRestaurants.length === 0) {
+  if (likedRestaurants.length === 0) {
     return (
       <View style={[styles.empty, { backgroundColor: t.bg }]}>
-        <Text style={styles.emptyEmoji}>👋</Text>
-        <Text style={styles.emptyTitle}>Nothing here yet</Text>
-        <Text style={styles.emptySubtitle}>Restaurants you pass on will show up here.</Text>
+        <Text style={styles.emptyEmoji}>💚</Text>
+        <Text style={styles.emptyTitle}>No likes yet</Text>
+        <Text style={styles.emptySubtitle}>Swipe right on restaurants you want to try!</Text>
       </View>
     );
   }
 
   return (
+    <View style={{ flex: 1, backgroundColor: t.bg }}>
     <FlatList
-      data={notNowRestaurants}
+      data={likedRestaurants}
       keyExtractor={(item) => item.id}
       contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 16 }]}
       renderItem={({ item }) => (
@@ -59,21 +63,18 @@ export default function NotNowScreen({ navigation }) {
           </View>
           <View style={styles.rightCol}>
             <Text style={styles.chevron}>›</Text>
-            <TouchableOpacity
-              onPress={() => removeNotNow(item.id)}
-              style={styles.removeButton}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
+            <TouchableOpacity onPress={() => removeLiked(item.id)} style={styles.removeButton} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Text style={styles.removeText}>✕</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       )}
     />
+    </View>
   );
 }
 
-function createStyles(t) {
+function createStyles(t: Theme) {
   return StyleSheet.create({
     list: { padding: 16, gap: 10 },
     empty: {
@@ -91,9 +92,9 @@ function createStyles(t) {
     thumbnailPlaceholder: { backgroundColor: t.inputBg, justifyContent: 'center', alignItems: 'center' },
     info: { flex: 1, paddingHorizontal: 12, paddingVertical: 10 },
     name: { fontSize: 16, fontWeight: '600', color: t.text, marginBottom: 2 },
-    meta: { fontSize: 13, color: t.textSecondary, marginBottom: 2 },
+    meta: { fontSize: 13, color: t.textTertiary, marginBottom: 2 },
     address: { fontSize: 12, color: t.textTertiary, marginBottom: 3 },
-    description: { fontSize: 12, color: t.textSecondary, lineHeight: 17 },
+    description: { fontSize: 12, color: t.textTertiary, lineHeight: 17 },
     rightCol: { alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, paddingRight: 12, gap: 12 },
     chevron: { fontSize: 20, color: t.textTertiary, fontWeight: '400' },
     removeButton: { padding: 4 },

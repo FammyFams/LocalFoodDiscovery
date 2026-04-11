@@ -1,30 +1,31 @@
 import { PLACES_PROXY_URL } from '../env';
+import { Restaurant } from '../types';
 
-const MAX_RADIUS_MILES = 31; // Google Places API cap (~50km)
+const MAX_RADIUS_MILES: number = 31; // Google Places API cap (~50km)
 
-function milesToMeters(miles) {
+function milesToMeters(miles: number): number {
   return Math.round(Math.min(miles, MAX_RADIUS_MILES) * 1609.34);
 }
 
 // Photos load via the proxy's /photo endpoint, which 302-redirects to a
 // signed Google CDN URL. The Google API key never touches the client.
-export function getPhotoUrl(photoName) {
+export function getPhotoUrl(photoName: string): string {
   return `${PLACES_PROXY_URL}/photo?name=${encodeURIComponent(photoName)}&maxHeightPx=800`;
 }
 
-function parsePriceLevel(level) {
-  const map = {
+function parsePriceLevel(level: string | undefined): number {
+  const map: Record<string, number> = {
     PRICE_LEVEL_FREE: 0,
     PRICE_LEVEL_INEXPENSIVE: 1,
     PRICE_LEVEL_MODERATE: 2,
     PRICE_LEVEL_EXPENSIVE: 3,
     PRICE_LEVEL_VERY_EXPENSIVE: 4,
   };
-  return map[level] ?? 1;
+  return map[level as string] ?? 1;
 }
 
 
-function parseTypes(types = []) {
+function parseTypes(types: string[] = []): string[] {
   const skip = new Set(['restaurant', 'food', 'point_of_interest', 'establishment', 'store']);
   return types
     .filter((t) => !skip.has(t))
@@ -33,7 +34,7 @@ function parseTypes(types = []) {
 }
 
 
-const FIELD_MASK = [
+const FIELD_MASK: string = [
   'places.id',
   'places.displayName',
   'places.rating',
@@ -58,7 +59,15 @@ const FIELD_MASK = [
   'places.dineIn',
 ].join(',');
 
-async function fetchOneBucket({ latitude, longitude, radiusMiles, includedTypes, excludedTypes }) {
+interface FetchBucketParams {
+  latitude: number;
+  longitude: number;
+  radiusMiles: number;
+  includedTypes: string[];
+  excludedTypes: string[];
+}
+
+async function fetchOneBucket({ latitude, longitude, radiusMiles, includedTypes, excludedTypes }: FetchBucketParams): Promise<any[]> {
   const body = {
     includedTypes,
     ...(excludedTypes.length > 0 && { excludedTypes }),
@@ -85,13 +94,22 @@ async function fetchOneBucket({ latitude, longitude, radiusMiles, includedTypes,
   return data.places || [];
 }
 
-export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles = 1, cuisineTypes = [], noFastFood = false, noConvenienceStore = false }) {
-  const excludedTypes = [
+interface FetchNearbyParams {
+  latitude: number;
+  longitude: number;
+  radiusMiles?: number;
+  cuisineTypes?: string[];
+  noFastFood?: boolean;
+  noConvenienceStore?: boolean;
+}
+
+export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles = 1, cuisineTypes = [], noFastFood = false, noConvenienceStore = false }: FetchNearbyParams): Promise<Restaurant[]> {
+  const excludedTypes: string[] = [
     ...(noFastFood ? ['fast_food_restaurant'] : []),
     ...(noConvenienceStore ? ['convenience_store', 'gas_station'] : []),
   ];
 
-  let rawPlaces;
+  let rawPlaces: any[];
   if (cuisineTypes.length === 0) {
     rawPlaces = await fetchOneBucket({
       latitude, longitude, radiusMiles,
@@ -108,17 +126,17 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
 
   const HOTEL_TYPES = new Set(['hotel', 'motel', 'lodging', 'extended_stay_hotel', 'resort_hotel', 'bed_and_breakfast', 'hostel', 'inn']);
 
-  const filtered = rawPlaces.filter((place) => {
-    if (place.types?.some((t) => HOTEL_TYPES.has(t))) return false;
+  const filtered = rawPlaces.filter((place: any) => {
+    if (place.types?.some((t: string) => HOTEL_TYPES.has(t))) return false;
     return true;
   });
 
   // Partition into open and closed, shuffle each group, then concat
   // so closed restaurants appear at the back instead of being discarded
-  const open = filtered.filter((p) => p.regularOpeningHours?.openNow !== false);
-  const closed = filtered.filter((p) => p.regularOpeningHours?.openNow === false);
+  const open = filtered.filter((p: any) => p.regularOpeningHours?.openNow !== false);
+  const closed = filtered.filter((p: any) => p.regularOpeningHours?.openNow === false);
 
-  function shuffle(arr) {
+  function shuffle<T>(arr: T[]): T[] {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
@@ -127,13 +145,13 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
   }
   const shuffled = [...shuffle(open), ...shuffle(closed)];
 
-  return shuffled.map((place) => ({
+  return shuffled.map((place: any): Restaurant => ({
     id: place.id,
     name: place.displayName?.text ?? 'Unknown',
     distance: null,
     priceLevel: parsePriceLevel(place.priceLevel),
-    images: (place.photos || []).slice(0, 1).map((p) => getPhotoUrl(p.name)),
-    allPhotoRefs: (place.photos || []).slice(0, 3).map((p) => p.name),
+    images: (place.photos || []).slice(0, 1).map((p: any) => getPhotoUrl(p.name)),
+    allPhotoRefs: (place.photos || []).slice(0, 3).map((p: any) => p.name),
     address: place.formattedAddress ?? 'Address unavailable',
     rating: place.rating ? place.rating.toFixed(1) : null,
     userRatingsTotal: place.userRatingCount ?? null,
@@ -154,6 +172,6 @@ export async function fetchNearbyRestaurants({ latitude, longitude, radiusMiles 
       place.servesDinner && 'Dinner',
       place.servesBeer && 'Beer',
       place.servesWine && 'Wine',
-    ].filter(Boolean),
+    ].filter(Boolean) as string[],
   }));
 }

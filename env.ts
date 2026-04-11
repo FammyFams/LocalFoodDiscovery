@@ -3,6 +3,6 @@
 
 // Places API proxy (Supabase Edge Function). The GOOGLE_API_KEY lives only
 // in Supabase secrets — it is never bundled into the app.
-export const PLACES_PROXY_URL = process.env.EXPO_PUBLIC_PLACES_PROXY_URL || '';
+export const PLACES_PROXY_URL: string = process.env.EXPO_PUBLIC_PLACES_PROXY_URL || '';
 
-export const POSTHOG_API_KEY = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';
+export const POSTHOG_API_KEY: string = process.env.EXPO_PUBLIC_POSTHOG_API_KEY || '';

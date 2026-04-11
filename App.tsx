@@ -1,5 +1,6 @@
 import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -22,11 +23,10 @@ import MapPickerScreen from './screens/MapPickerScreen';
 import DecisionScreen from './screens/DecisionScreen';
 import AccountScreen from './screens/AccountScreen';
 import DietPreferencesScreen from './screens/DietPreferencesScreen';
-
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-function TabIcon({ emoji, focused }) {
+function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
   return <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.4 }}>{emoji}</Text>;
 }
 
@@ -36,6 +36,7 @@ function TabNavigator() {
   const bottomPad = Math.max(insets.bottom, 12);
   return (
     <Tab.Navigator
+      id="MainTabs"
       screenOptions={{
         tabBarStyle: {
           backgroundColor: t.tabBar,
@@ -65,7 +66,6 @@ function TabNavigator() {
           tabBarIcon: ({ focused }) => <TabIcon emoji="💚" focused={focused} />,
           headerShown: true,
           headerTitle: 'Liked',
-          headerLargeTitle: true,
           headerStyle: { backgroundColor: t.bg },
           headerShadowVisible: false,
           headerTitleStyle: { fontFamily: 'Lora_700Bold', fontSize: 17, color: t.text },
@@ -78,7 +78,6 @@ function TabNavigator() {
           tabBarIcon: ({ focused }) => <TabIcon emoji="👋" focused={focused} />,
           headerShown: true,
           headerTitle: 'Passed',
-          headerLargeTitle: true,
           headerStyle: { backgroundColor: t.bg },
           headerShadowVisible: false,
           headerTitleStyle: { fontFamily: 'Lora_700Bold', fontSize: 17, color: t.text },
@@ -91,7 +90,6 @@ function TabNavigator() {
           tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
           headerShown: true,
           headerTitle: 'Settings',
-          headerLargeTitle: true,
           headerStyle: { backgroundColor: t.bg },
           headerShadowVisible: false,
           headerTitleStyle: { fontFamily: 'Lora_700Bold', fontSize: 17, color: t.text },
@@ -130,7 +128,7 @@ function AppContent() {
 
   return (
     <NavigationContainer theme={navTheme}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator id="RootStack" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Tabs" component={TabNavigator} />
         <Stack.Screen
           name="Detail"
@@ -186,6 +184,7 @@ export default function App() {
   }
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
     <SettingsProvider>
     <ThemeProvider>
@@ -195,5 +194,6 @@ export default function App() {
     </ThemeProvider>
     </SettingsProvider>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

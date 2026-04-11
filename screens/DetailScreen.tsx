@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,20 +11,28 @@ import {
   Animated,
   Linking,
   Share,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRestaurants } from '../context/RestaurantContext';
-import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
 import { getPhotoUrl } from '../services/googlePlaces';
 import { trackEvent } from '../services/analytics';
 import Svg, { Path } from 'react-native-svg';
+import type { Restaurant, Theme } from '../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const IMAGE_HEIGHT = Math.min(SCREEN_WIDTH * 0.75, 360);
 
-export default function DetailScreen({ route, navigation }) {
+interface DetailScreenProps {
+  route: { params: { restaurant: Restaurant } };
+  navigation: any;
+}
+
+export default function DetailScreen({ route, navigation }: DetailScreenProps) {
   const { restaurant } = route.params;
-  const t = useTheme();
+  const styles = useThemedStyles(createStyles);
 
   useEffect(() => {
     trackEvent('detail_viewed', {
@@ -36,7 +44,6 @@ export default function DetailScreen({ route, navigation }) {
   const { likedRestaurants, notNowRestaurants, likeRestaurant, dislikeRestaurant, removeLiked, removeNotNow } =
     useRestaurants();
   const insets = useSafeAreaInsets();
-  const styles = useMemo(() => createStyles(t), [t]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showAllHours, setShowAllHours] = useState(false);
 
@@ -46,7 +53,7 @@ export default function DetailScreen({ route, navigation }) {
   const likeAnim = useRef(new Animated.Value(1)).current;
   const notNowAnim = useRef(new Animated.Value(1)).current;
 
-  function pulseButton(anim, callback) {
+  function pulseButton(anim: Animated.Value, callback: () => void) {
     Animated.sequence([
       Animated.spring(anim, { toValue: 1.25, useNativeDriver: true, speed: 40, bounciness: 20 }),
       Animated.spring(anim, { toValue: 1, useNativeDriver: true, speed: 20 }),
@@ -85,16 +92,16 @@ export default function DetailScreen({ route, navigation }) {
   }
 
   // Load all photos lazily from refs when detail screen opens
-  const [allImages, setAllImages] = useState(restaurant.images || []);
+  const [allImages, setAllImages] = useState<string[]>(restaurant.images || []);
   useEffect(() => {
     if (restaurant.allPhotoRefs?.length > 1) {
       const fullUrls = restaurant.allPhotoRefs.map((ref) => getPhotoUrl(ref));
       setAllImages(fullUrls);
     }
   }, [restaurant.id]);
-  const images = allImages.length > 0 ? allImages : [null];
-  const imageScrollRef = useRef(null);
-  const autoScrollTimer = useRef(null);
+  const images: (string | null)[] = allImages.length > 0 ? allImages : [null];
+  const imageScrollRef = useRef<ScrollView>(null);
+  const autoScrollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Auto-scroll photos every 3 seconds; stops permanently if user swipes manually
   useEffect(() => {
@@ -106,14 +113,16 @@ export default function DetailScreen({ route, navigation }) {
         return next;
       });
     }, 3000);
-    return () => clearInterval(autoScrollTimer.current);
+    return () => {
+      if (autoScrollTimer.current) clearInterval(autoScrollTimer.current);
+    };
   }, [images.length]);
 
   const todayIndex = new Date().getDay(); // 0=Sun, need to map to Foursquare index
   const todayHours = restaurant.hours?.[todayIndex === 0 ? 6 : todayIndex - 1];
 
   return (
-    <View style={[styles.container, { backgroundColor: t.bg }]}>
+    <View style={[styles.container, { backgroundColor: styles.container.backgroundColor }]}>
     <ScrollView showsVerticalScrollIndicator={false}>
       {/* Image carousel */}
       <View style={styles.imageContainer}>
@@ -123,17 +132,17 @@ export default function DetailScreen({ route, navigation }) {
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           onScrollBeginDrag={() => {
-            clearInterval(autoScrollTimer.current);
+            if (autoScrollTimer.current) clearInterval(autoScrollTimer.current);
           }}
-          onMomentumScrollEnd={(e) => {
+          onMomentumScrollEnd={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
             setCurrentImageIndex(Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH));
           }}
         >
           {images.map((uri, i) =>
             uri ? (
-              <Image key={i} source={{ uri }} style={styles.image} resizeMode="cover" />
+              <Image key={uri} source={{ uri }} style={styles.image} resizeMode="cover" />
             ) : (
-              <View key={i} style={[styles.image, styles.imagePlaceholder]}>
+              <View key={`placeholder-${i}`} style={[styles.image, styles.imagePlaceholder]}>
                 <Text style={{ fontSize: 72 }}>🍽️</Text>
               </View>
             )
@@ -142,8 +151,8 @@ export default function DetailScreen({ route, navigation }) {
 
         {images.length > 1 && (
           <View style={styles.dots}>
-            {images.map((_, i) => (
-              <View key={i} style={[styles.dot, i === currentImageIndex && styles.dotActive]} />
+            {images.map((uri, i) => (
+              <View key={uri ?? `dot-placeholder-${i}`} style={[styles.dot, i === currentImageIndex && styles.dotActive]} />
             ))}
           </View>
         )}
@@ -154,7 +163,7 @@ export default function DetailScreen({ route, navigation }) {
       <View style={[styles.info, { paddingBottom: insets.bottom + 20 }]}>
         {/* Name + open status */}
         <View style={styles.nameRow}>
-          <Text style={[styles.name, { color: t.text }]}>{restaurant.name}</Text>
+          <Text style={styles.name}>{restaurant.name}</Text>
           {restaurant.openNow !== null && (
             <View style={[styles.openBadge, restaurant.openNow ? styles.openBadgeOpen : styles.openBadgeClosed]}>
               <Text style={[styles.openBadgeText, { color: restaurant.openNow ? '#15803d' : '#b91c1c' }]}>
@@ -168,8 +177,8 @@ export default function DetailScreen({ route, navigation }) {
         {restaurant.types?.length > 0 && (
           <View style={styles.typesRow}>
             {restaurant.types.map((type) => (
-              <View key={type} style={[styles.typeChip, { backgroundColor: t.inputBg }]}>
-                <Text style={[styles.typeChipText, { color: t.textTertiary }]}>{type}</Text>
+              <View key={type} style={styles.typeChip}>
+                <Text style={styles.typeChipText}>{type}</Text>
               </View>
             ))}
           </View>
@@ -178,16 +187,16 @@ export default function DetailScreen({ route, navigation }) {
         {/* Badges row */}
         <View style={styles.metaRow}>
           {restaurant.rating && (
-            <View style={[styles.badge, { backgroundColor: t.surface }]}>
-              <Text style={[styles.badgeText, { color: t.textSecondary }]}>⭐ {restaurant.rating}</Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>⭐ {restaurant.rating}</Text>
               {restaurant.userRatingsTotal && (
-                <Text style={[styles.badgeSubText, { color: t.textTertiary }]}> ({restaurant.userRatingsTotal.toLocaleString()})</Text>
+                <Text style={styles.badgeSubText}> ({restaurant.userRatingsTotal.toLocaleString()})</Text>
               )}
             </View>
           )}
           {restaurant.priceLevel > 0 && (
-            <View style={[styles.badge, { backgroundColor: t.surface }]}>
-              <Text style={[styles.badgeText, { color: t.textSecondary }]}>{'$'.repeat(restaurant.priceLevel)}</Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{'$'.repeat(restaurant.priceLevel)}</Text>
             </View>
           )}
         </View>
@@ -195,7 +204,7 @@ export default function DetailScreen({ route, navigation }) {
         {/* Description */}
         {restaurant.description && (
           <View style={styles.section}>
-            <Text style={[styles.description, { color: t.textSecondary }]}>{restaurant.description}</Text>
+            <Text style={styles.description}>{restaurant.description}</Text>
           </View>
         )}
 
@@ -203,29 +212,29 @@ export default function DetailScreen({ route, navigation }) {
         {restaurant.tags?.length > 0 && (
           <View style={styles.tagsRow}>
             {restaurant.tags.map((tag) => (
-              <View key={tag} style={[styles.tag, { backgroundColor: t.inputBg }]}>
-                <Text style={[styles.tagText, { color: t.textTertiary }]}>{tag}</Text>
+              <View key={tag} style={styles.tag}>
+                <Text style={styles.tagText}>{tag}</Text>
               </View>
             ))}
           </View>
         )}
 
-        <View style={[styles.divider, { backgroundColor: t.separator }]} />
+        <View style={styles.divider} />
 
         {/* Address + map links */}
         <View style={styles.infoRow}>
           <Text style={styles.infoIcon}>📍</Text>
-          <Text style={[styles.infoText, { color: t.textSecondary }]}>{restaurant.address}</Text>
+          <Text style={styles.infoText}>{restaurant.address}</Text>
         </View>
         <View style={styles.mapLinksRow}>
           <TouchableOpacity
-            style={[styles.mapLink, { backgroundColor: t.inputBg }]}
+            style={styles.mapLink}
             onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.name + ', ' + restaurant.address)}`)}
           >
             <Text style={styles.mapLinkText}>🗺️ Google Maps</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.mapLink, { backgroundColor: t.inputBg }]}
+            style={styles.mapLink}
             onPress={() => Linking.openURL(
               Platform.OS === 'ios'
                 ? `maps://?q=${encodeURIComponent(restaurant.name + ', ' + restaurant.address)}`
@@ -240,15 +249,15 @@ export default function DetailScreen({ route, navigation }) {
         {restaurant.phone && (
           <TouchableOpacity style={styles.infoRow} onPress={() => Linking.openURL(`tel:${restaurant.phone}`)}>
             <Text style={styles.infoIcon}>📞</Text>
-            <Text style={[styles.infoText, styles.link, { color: t.blue }]}>{restaurant.phone}</Text>
+            <Text style={[styles.infoText, styles.link]}>{restaurant.phone}</Text>
           </TouchableOpacity>
         )}
 
         {/* Website */}
         {restaurant.website && (
-          <TouchableOpacity style={styles.infoRow} onPress={() => Linking.openURL(restaurant.website)}>
+          <TouchableOpacity style={styles.infoRow} onPress={() => Linking.openURL(restaurant.website!)}>
             <Text style={styles.infoIcon}>🌐</Text>
-            <Text style={[styles.infoText, styles.link, { color: t.blue }]} numberOfLines={1}>
+            <Text style={[styles.infoText, styles.link]} numberOfLines={1}>
               {restaurant.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
             </Text>
           </TouchableOpacity>
@@ -259,23 +268,23 @@ export default function DetailScreen({ route, navigation }) {
           <View style={styles.hoursSection}>
             <TouchableOpacity style={styles.infoRow} onPress={() => setShowAllHours((v) => !v)}>
               <Text style={styles.infoIcon}>🕐</Text>
-              <Text style={[styles.infoText, { color: t.textSecondary }]}>{todayHours ?? 'See hours'}</Text>
+              <Text style={styles.infoText}>{todayHours ?? 'See hours'}</Text>
               <Text style={styles.chevron}>{showAllHours ? '▲' : '▼'}</Text>
             </TouchableOpacity>
             {showAllHours &&
-              restaurant.hours.map((h, i) => (
-                <Text key={i} style={[styles.hourLine, { color: t.textTertiary }]}>{h}</Text>
+              restaurant.hours.map((h) => (
+                <Text key={h} style={styles.hourLine}>{h}</Text>
               ))}
           </View>
         )}
 
-        <View style={[styles.divider, { backgroundColor: t.separator }]} />
+        <View style={styles.divider} />
 
         {/* Action buttons */}
         <View style={styles.actionRow}>
           <Animated.View style={{ transform: [{ scale: notNowAnim }], flex: 1 }}>
             <TouchableOpacity
-              style={[styles.actionButton, isNotNow ? styles.activeNotNow : styles.inactiveNotNow, !isNotNow && { backgroundColor: t.surface }]}
+              style={[styles.actionButton, isNotNow ? styles.activeNotNow : styles.inactiveNotNow]}
               onPress={handleNotNow}
               activeOpacity={0.8}
             >
@@ -289,7 +298,7 @@ export default function DetailScreen({ route, navigation }) {
 
           <Animated.View style={{ transform: [{ scale: likeAnim }], flex: 1 }}>
             <TouchableOpacity
-              style={[styles.actionButton, isLiked ? styles.activeLike : styles.inactiveLike, !isLiked && { backgroundColor: t.surface }]}
+              style={[styles.actionButton, isLiked ? styles.activeLike : styles.inactiveLike]}
               onPress={handleLike}
               activeOpacity={0.8}
             >
@@ -315,7 +324,7 @@ export default function DetailScreen({ route, navigation }) {
   );
 }
 
-function createStyles(t) {
+function createStyles(t: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: t.bg },
     imageContainer: { position: 'relative', height: IMAGE_HEIGHT, backgroundColor: t.separator },
@@ -345,7 +354,7 @@ function createStyles(t) {
     metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
     badge: {
       flexDirection: 'row', alignItems: 'center',
-      backgroundColor: t.card, borderRadius: 16,
+      backgroundColor: t.surface, borderRadius: 16,
       paddingHorizontal: 10, paddingVertical: 5,
     },
     badgeText: { fontSize: 14, fontFamily: 'Raleway_600SemiBold', color: t.textSecondary },
@@ -372,9 +381,9 @@ function createStyles(t) {
     hourLine: { fontSize: 13, color: t.textTertiary, marginLeft: 28, marginBottom: 3, lineHeight: 19 },
     actionRow: { flexDirection: 'row', marginTop: 4 },
     actionButton: { paddingVertical: 14, borderRadius: 24, alignItems: 'center', borderWidth: 1.5 },
-    inactiveLike: { borderColor: t.green, backgroundColor: t.card },
+    inactiveLike: { borderColor: t.green, backgroundColor: t.surface },
     activeLike: { borderColor: t.green, backgroundColor: t.green },
-    inactiveNotNow: { borderColor: t.red, backgroundColor: t.card },
+    inactiveNotNow: { borderColor: t.red, backgroundColor: t.surface },
     activeNotNow: { borderColor: t.red, backgroundColor: t.red },
     actionButtonText: { fontSize: 16, fontFamily: 'Raleway_600SemiBold', color: t.textSecondary },
     activeActionText: { color: '#fff' },

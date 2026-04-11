@@ -16,16 +16,27 @@ import { useTheme } from '../context/ThemeContext';
 import { trackEvent } from '../services/analytics';
 
 const APP_VERSION = '1.0.0';
-const APP_STORE_URL = null;
+const APP_STORE_URL: string | null = null;
 
-const PRICE_OPTIONS = [
+interface PriceOption {
+  level: number;
+  label: string;
+}
+
+interface DietOption {
+  key: string;
+  label: string;
+  emoji: string;
+}
+
+const PRICE_OPTIONS: PriceOption[] = [
   { level: 1, label: '$' },
   { level: 2, label: '$$' },
   { level: 3, label: '$$$' },
   { level: 4, label: '$$$$' },
 ];
 
-const DIET_OPTIONS = [
+const DIET_OPTIONS: DietOption[] = [
   { key: 'vegetarian', label: 'Vegetarian', emoji: '🥗' },
   { key: 'vegan', label: 'Vegan', emoji: '🌱' },
   { key: 'halal', label: 'Halal', emoji: '🍖' },
@@ -33,7 +44,7 @@ const DIET_OPTIONS = [
   { key: 'gluten_free', label: 'Gluten Free', emoji: '🌾' },
 ];
 
-export default function AccountScreen({ navigation }) {
+export default function AccountScreen({ navigation }: { navigation: any }) {
   const { settings, updateSettings } = useSettings();
   const { clearAll, likedRestaurants, notNowRestaurants } = useRestaurants();
   const t = useTheme();
@@ -42,12 +53,12 @@ export default function AccountScreen({ navigation }) {
   const dietEnabled = settings.dietRestrictionsEnabled || false;
   const dietPrefs = settings.dietPreferences || [];
 
-  function toggleDietEnabled(val) {
+  function toggleDietEnabled(val: boolean) {
     updateSettings({ dietRestrictionsEnabled: val });
     if (!val) updateSettings({ dietPreferences: [] });
   }
 
-  function toggleDiet(key) {
+  function toggleDiet(key: string) {
     if (dietPrefs.includes(key)) {
       updateSettings({ dietPreferences: dietPrefs.filter((d) => d !== key) });
     } else {
@@ -55,7 +66,7 @@ export default function AccountScreen({ navigation }) {
     }
   }
 
-  function togglePrice(level) {
+  function togglePrice(level: number) {
     const current = settings.priceRange || [1, 2, 3, 4];
     if (current.includes(level)) {
       if (current.length === 1) return;
@@ -89,29 +100,29 @@ export default function AccountScreen({ navigation }) {
     container: { flex: 1, backgroundColor: t.bg },
     content: { paddingHorizontal: 16, paddingTop: 8 },
     section: { marginBottom: 24 },
-    sectionHeader: { fontSize: 13, fontWeight: '500', color: t.textTertiary, marginBottom: 6, marginLeft: 4, letterSpacing: 0.5 },
-    card: { backgroundColor: t.card, borderRadius: 12, overflow: 'hidden' },
-    row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, minHeight: 44 },
+    sectionHeader: { fontSize: 13, fontWeight: '500' as const, color: t.textTertiary, marginBottom: 6, marginLeft: 4, letterSpacing: 0.5 },
+    card: { backgroundColor: t.card, borderRadius: 12, overflow: 'hidden' as const },
+    row: { flexDirection: 'row' as const, alignItems: 'center' as const, paddingHorizontal: 16, paddingVertical: 13, minHeight: 44 },
     rowLabel: { flex: 1, fontSize: 16, color: t.text },
     rowEmoji: { fontSize: 18, marginRight: 12 },
     rowDetail: { fontSize: 15, color: t.textTertiary, marginRight: 6 },
-    rowChevron: { fontSize: 20, color: t.textQuaternary, fontWeight: '400' },
-    checkmark: { fontSize: 17, color: t.accent, fontWeight: '600', width: 24, textAlign: 'right' },
+    rowChevron: { fontSize: 20, color: t.textQuaternary, fontWeight: '400' as const },
+    checkmark: { fontSize: 17, color: t.accent, fontWeight: '600' as const, width: 24, textAlign: 'right' as const },
     destructive: { color: t.destructive },
     separator: { height: 0.5, backgroundColor: t.separator, marginLeft: 16 },
-    authRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
+    authRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, paddingHorizontal: 16, paddingVertical: 14 },
     authEmoji: { fontSize: 32 },
-    authTitle: { fontSize: 17, fontWeight: '600', color: t.text },
+    authTitle: { fontSize: 17, fontWeight: '600' as const, color: t.text },
     authSub: { fontSize: 13, color: t.textTertiary, marginTop: 2 },
-    authButton: { marginHorizontal: 16, marginTop: 8, backgroundColor: t.inputBg, borderRadius: 10, paddingVertical: 12, alignItems: 'center' },
+    authButton: { marginHorizontal: 16, marginTop: 8, backgroundColor: t.inputBg, borderRadius: 10, paddingVertical: 12, alignItems: 'center' as const },
     authButtonApple: { backgroundColor: settings.darkMode ? '#fff' : '#1C1C1E', marginBottom: 8 },
-    authButtonText: { fontSize: 15, fontWeight: '600', color: t.textSecondary },
+    authButtonText: { fontSize: 15, fontWeight: '600' as const, color: t.textSecondary },
     authButtonAppleText: { color: settings.darkMode ? '#1C1C1E' : '#fff' },
-    authNote: { fontSize: 12, color: t.textTertiary, textAlign: 'center', paddingBottom: 12 },
-    priceRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
-    priceChip: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: t.inputBg, alignItems: 'center' },
+    authNote: { fontSize: 12, color: t.textTertiary, textAlign: 'center' as const, paddingBottom: 12 },
+    priceRow: { flexDirection: 'row' as const, gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
+    priceChip: { flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: t.inputBg, alignItems: 'center' as const },
     priceChipActive: { backgroundColor: t.accent },
-    priceChipText: { fontSize: 15, fontWeight: '600', color: t.textTertiary },
+    priceChipText: { fontSize: 15, fontWeight: '600' as const, color: t.textTertiary },
     priceChipTextActive: { color: '#fff' },
   };
 

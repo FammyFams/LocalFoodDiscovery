@@ -1,9 +1,17 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch } from 'react-native';
 import { useSettings } from '../context/SettingsContext';
 import { useTheme } from '../context/ThemeContext';
+import { useThemedStyles } from '../hooks/useThemedStyles';
+import type { Theme } from '../types';
 
-const DIET_OPTIONS = [
+interface DietOption {
+  key: string;
+  label: string;
+  emoji: string;
+}
+
+const DIET_OPTIONS: DietOption[] = [
   { key: 'vegetarian', label: 'Vegetarian', emoji: '🥗' },
   { key: 'vegan', label: 'Vegan', emoji: '🌱' },
   { key: 'halal', label: 'Halal', emoji: '🍖' },
@@ -14,16 +22,16 @@ const DIET_OPTIONS = [
 export default function DietPreferencesScreen() {
   const { settings, updateSettings } = useSettings();
   const t = useTheme();
-  const styles = useMemo(() => createStyles(t), [t]);
+  const styles = useThemedStyles(createStyles);
   const enabled = settings.dietRestrictionsEnabled || false;
   const current = settings.dietPreferences || [];
 
-  function toggleEnabled(val) {
+  function toggleEnabled(val: boolean) {
     updateSettings({ dietRestrictionsEnabled: val });
     if (!val) updateSettings({ dietPreferences: [] });
   }
 
-  function toggle(key) {
+  function toggle(key: string) {
     if (current.includes(key)) {
       updateSettings({ dietPreferences: current.filter((d) => d !== key) });
     } else {
@@ -69,7 +77,7 @@ export default function DietPreferencesScreen() {
   );
 }
 
-function createStyles(t) {
+function createStyles(t: Theme) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: t.bg, paddingHorizontal: 16, paddingTop: 16 },
     card: { backgroundColor: t.card, borderRadius: 12, overflow: 'hidden', marginBottom: 16 },
